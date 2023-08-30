@@ -42,7 +42,8 @@ static int sdio_read_fbr(struct sdio_func *func)
 	}
 
 	ret = mmc_io_rw_direct(func->card, 0, 0,
-		SDIO_FBR_BASE(func->num) + SDIO_FBR_STD_IF, 0, &data);
+			       SDIO_FBR_BASE(func->num) + SDIO_FBR_STD_IF, 0,
+			       &data);
 	if (ret)
 		goto out;
 
@@ -50,7 +51,9 @@ static int sdio_read_fbr(struct sdio_func *func)
 
 	if (data == 0x0f) {
 		ret = mmc_io_rw_direct(func->card, 0, 0,
-			SDIO_FBR_BASE(func->num) + SDIO_FBR_STD_IF_EXT, 0, &data);
+				       SDIO_FBR_BASE(func->num) +
+					       SDIO_FBR_STD_IF_EXT,
+				       0, &data);
 		if (ret)
 			goto out;
 	}
@@ -118,7 +121,7 @@ static int sdio_read_cccr(struct mmc_card *card, u32 ocr)
 
 	if (cccr_vsn > SDIO_CCCR_REV_3_00) {
 		pr_err("%s: unrecognised CCCR structure version %d\n",
-			mmc_hostname(card->host), cccr_vsn);
+		       mmc_hostname(card->host), cccr_vsn);
 		return -EINVAL;
 	}
 
@@ -154,27 +157,27 @@ static int sdio_read_cccr(struct mmc_card *card, u32 ocr)
 		card->sw_caps.sd3_drv_type = 0;
 		if (cccr_vsn >= SDIO_CCCR_REV_3_00 && uhs) {
 			card->scr.sda_spec3 = 1;
-			ret = mmc_io_rw_direct(card, 0, 0,
-				SDIO_CCCR_UHS, 0, &data);
+			ret = mmc_io_rw_direct(card, 0, 0, SDIO_CCCR_UHS, 0,
+					       &data);
 			if (ret)
 				goto out;
 
 			if (mmc_host_uhs(card->host)) {
 				if (data & SDIO_UHS_DDR50)
-					card->sw_caps.sd3_bus_mode
-						|= SD_MODE_UHS_DDR50;
+					card->sw_caps.sd3_bus_mode |=
+						SD_MODE_UHS_DDR50;
 
 				if (data & SDIO_UHS_SDR50)
-					card->sw_caps.sd3_bus_mode
-						|= SD_MODE_UHS_SDR50;
+					card->sw_caps.sd3_bus_mode |=
+						SD_MODE_UHS_SDR50;
 
 				if (data & SDIO_UHS_SDR104)
-					card->sw_caps.sd3_bus_mode
-						|= SD_MODE_UHS_SDR104;
+					card->sw_caps.sd3_bus_mode |=
+						SD_MODE_UHS_SDR104;
 			}
 
-			ret = mmc_io_rw_direct(card, 0, 0,
-				SDIO_CCCR_DRIVE_STRENGTH, 0, &data);
+			ret = mmc_io_rw_direct(
+				card, 0, 0, SDIO_CCCR_DRIVE_STRENGTH, 0, &data);
 			if (ret)
 				goto out;
 
@@ -186,14 +189,16 @@ static int sdio_read_cccr(struct mmc_card *card, u32 ocr)
 				card->sw_caps.sd3_drv_type |= SD_DRIVER_TYPE_D;
 
 			ret = mmc_io_rw_direct(card, 0, 0,
-				SDIO_CCCR_INTERRUPT_EXTENSION, 0, &data);
+					       SDIO_CCCR_INTERRUPT_EXTENSION, 0,
+					       &data);
 			if (ret)
 				goto out;
 			if (data & SDIO_SUPPORT_ASYNC_INTR) {
 				if (card->host->caps2 &
-					MMC_CAP2_ASYNC_SDIO_IRQ_4BIT_MODE) {
+				    MMC_CAP2_ASYNC_SDIO_IRQ_4BIT_MODE) {
 					data |= SDIO_ENABLE_ASYNC_INTR;
-					ret = mmc_io_rw_direct(card, 1, 0,
+					ret = mmc_io_rw_direct(
+						card, 1, 0,
 						SDIO_CCCR_INTERRUPT_EXTENSION,
 						data, NULL);
 					if (ret)
@@ -225,19 +230,19 @@ static void sdio_enable_vendor_specific_settings(struct mmc_card *card)
 	u8 settings;
 
 	if (mmc_enable_qca6574_settings(card) ||
-		mmc_enable_qca9377_settings(card) ||
-		mmc_enable_qca9379_settings(card)) {
+	    mmc_enable_qca9377_settings(card) ||
+	    mmc_enable_qca9379_settings(card)) {
 		ret = mmc_io_rw_direct(card, 1, 0, 0xF2, 0x0F, NULL);
 		if (ret) {
 			pr_crit("%s: failed to write to fn 0xf2 %d\n",
-					mmc_hostname(card->host), ret);
+				mmc_hostname(card->host), ret);
 			goto out;
 		}
 
 		ret = mmc_io_rw_direct(card, 0, 0, 0xF1, 0, &settings);
 		if (ret) {
 			pr_crit("%s: failed to read fn 0xf1 %d\n",
-			mmc_hostname(card->host), ret);
+				mmc_hostname(card->host), ret);
 			goto out;
 		}
 
@@ -252,7 +257,7 @@ static void sdio_enable_vendor_specific_settings(struct mmc_card *card)
 		ret = mmc_io_rw_direct(card, 0, 0, 0xF0, 0, &settings);
 		if (ret) {
 			pr_crit("%s: failed to read fn 0xf0 %d\n",
-			mmc_hostname(card->host), ret);
+				mmc_hostname(card->host), ret);
 			goto out;
 		}
 
@@ -358,7 +363,6 @@ static int sdio_disable_wide(struct mmc_card *card)
 	return 0;
 }
 
-
 static int sdio_enable_4bit_bus(struct mmc_card *card)
 {
 	int err;
@@ -383,7 +387,6 @@ static int sdio_enable_4bit_bus(struct mmc_card *card)
 
 	return err;
 }
-
 
 /*
  * Test if the card supports high-speed mode and, if so, switch to it.
@@ -481,9 +484,8 @@ static void sdio_select_driver_type(struct mmc_card *card)
 
 	card_drv_type = card->sw_caps.sd3_drv_type | SD_DRIVER_TYPE_B;
 
-	drive_strength = mmc_select_drive_strength(card,
-						   card->sw_caps.uhs_max_dtr,
-						   card_drv_type, &drv_type);
+	drive_strength = mmc_select_drive_strength(
+		card, card->sw_caps.uhs_max_dtr, card_drv_type, &drv_type);
 
 	if (drive_strength) {
 		/* if error just use default for drive strength B */
@@ -492,7 +494,8 @@ static void sdio_select_driver_type(struct mmc_card *card)
 		if (err)
 			return;
 
-		card_strength &= ~(SDIO_DRIVE_DTSx_MASK<<SDIO_DRIVE_DTSx_SHIFT);
+		card_strength &=
+			~(SDIO_DRIVE_DTSx_MASK << SDIO_DRIVE_DTSx_SHIFT);
 		card_strength |= host_drive_to_sdio_drive(drive_strength);
 
 		/* if error default to drive strength B */
@@ -506,7 +509,6 @@ static void sdio_select_driver_type(struct mmc_card *card)
 	if (drv_type)
 		mmc_set_driver_type(card->host, drv_type);
 }
-
 
 static int sdio_set_bus_speed_mode(struct mmc_card *card)
 {
@@ -526,38 +528,38 @@ static int sdio_set_bus_speed_mode(struct mmc_card *card)
 	timing = MMC_TIMING_UHS_SDR12;
 	if ((card->host->caps & MMC_CAP_UHS_SDR104) &&
 	    (card->sw_caps.sd3_bus_mode & SD_MODE_UHS_SDR104)) {
-			bus_speed = SDIO_SPEED_SDR104;
-			timing = MMC_TIMING_UHS_SDR104;
-			card->sw_caps.uhs_max_dtr = UHS_SDR104_MAX_DTR;
-			card->sd_bus_speed = UHS_SDR104_BUS_SPEED;
+		bus_speed = SDIO_SPEED_SDR104;
+		timing = MMC_TIMING_UHS_SDR104;
+		card->sw_caps.uhs_max_dtr = UHS_SDR104_MAX_DTR;
+		card->sd_bus_speed = UHS_SDR104_BUS_SPEED;
 	} else if ((card->host->caps & MMC_CAP_UHS_DDR50) &&
 		   (card->sw_caps.sd3_bus_mode & SD_MODE_UHS_DDR50)) {
-			bus_speed = SDIO_SPEED_DDR50;
-			timing = MMC_TIMING_UHS_DDR50;
-			card->sw_caps.uhs_max_dtr = UHS_DDR50_MAX_DTR;
-			card->sd_bus_speed = UHS_DDR50_BUS_SPEED;
-	} else if ((card->host->caps & (MMC_CAP_UHS_SDR104 |
-		    MMC_CAP_UHS_SDR50)) && (card->sw_caps.sd3_bus_mode &
-		    SD_MODE_UHS_SDR50)) {
-			bus_speed = SDIO_SPEED_SDR50;
-			timing = MMC_TIMING_UHS_SDR50;
-			card->sw_caps.uhs_max_dtr = UHS_SDR50_MAX_DTR;
-			card->sd_bus_speed = UHS_SDR50_BUS_SPEED;
-	} else if ((card->host->caps & (MMC_CAP_UHS_SDR104 |
-		    MMC_CAP_UHS_SDR50 | MMC_CAP_UHS_SDR25)) &&
+		bus_speed = SDIO_SPEED_DDR50;
+		timing = MMC_TIMING_UHS_DDR50;
+		card->sw_caps.uhs_max_dtr = UHS_DDR50_MAX_DTR;
+		card->sd_bus_speed = UHS_DDR50_BUS_SPEED;
+	} else if ((card->host->caps &
+		    (MMC_CAP_UHS_SDR104 | MMC_CAP_UHS_SDR50)) &&
+		   (card->sw_caps.sd3_bus_mode & SD_MODE_UHS_SDR50)) {
+		bus_speed = SDIO_SPEED_SDR50;
+		timing = MMC_TIMING_UHS_SDR50;
+		card->sw_caps.uhs_max_dtr = UHS_SDR50_MAX_DTR;
+		card->sd_bus_speed = UHS_SDR50_BUS_SPEED;
+	} else if ((card->host->caps & (MMC_CAP_UHS_SDR104 | MMC_CAP_UHS_SDR50 |
+					MMC_CAP_UHS_SDR25)) &&
 		   (card->sw_caps.sd3_bus_mode & SD_MODE_UHS_SDR25)) {
-			bus_speed = SDIO_SPEED_SDR25;
-			timing = MMC_TIMING_UHS_SDR25;
-			card->sw_caps.uhs_max_dtr = UHS_SDR25_MAX_DTR;
-			card->sd_bus_speed = UHS_SDR25_BUS_SPEED;
-	} else if ((card->host->caps & (MMC_CAP_UHS_SDR104 |
-		    MMC_CAP_UHS_SDR50 | MMC_CAP_UHS_SDR25 |
-		    MMC_CAP_UHS_SDR12)) && (card->sw_caps.sd3_bus_mode &
-		    SD_MODE_UHS_SDR12)) {
-			bus_speed = SDIO_SPEED_SDR12;
-			timing = MMC_TIMING_UHS_SDR12;
-			card->sw_caps.uhs_max_dtr = UHS_SDR12_MAX_DTR;
-			card->sd_bus_speed = UHS_SDR12_BUS_SPEED;
+		bus_speed = SDIO_SPEED_SDR25;
+		timing = MMC_TIMING_UHS_SDR25;
+		card->sw_caps.uhs_max_dtr = UHS_SDR25_MAX_DTR;
+		card->sd_bus_speed = UHS_SDR25_BUS_SPEED;
+	} else if ((card->host->caps &
+		    (MMC_CAP_UHS_SDR104 | MMC_CAP_UHS_SDR50 |
+		     MMC_CAP_UHS_SDR25 | MMC_CAP_UHS_SDR12)) &&
+		   (card->sw_caps.sd3_bus_mode & SD_MODE_UHS_SDR12)) {
+		bus_speed = SDIO_SPEED_SDR12;
+		timing = MMC_TIMING_UHS_SDR12;
+		card->sw_caps.uhs_max_dtr = UHS_SDR12_MAX_DTR;
+		card->sd_bus_speed = UHS_SDR12_BUS_SPEED;
 	}
 
 	err = mmc_io_rw_direct(card, 0, 0, SDIO_CCCR_SPEED, 0, &speed);
@@ -573,8 +575,8 @@ static int sdio_set_bus_speed_mode(struct mmc_card *card)
 	if (err)
 		return err;
 
-	max_rate = min_not_zero(card->quirk_max_rate,
-				card->sw_caps.uhs_max_dtr);
+	max_rate =
+		min_not_zero(card->quirk_max_rate, card->sw_caps.uhs_max_dtr);
 
 	if (bus_speed) {
 		mmc_set_timing(card->host, timing);
@@ -613,7 +615,7 @@ static int mmc_sdio_init_uhs_card(struct mmc_card *card)
 	 */
 	if (!mmc_host_is_spi(card->host) &&
 	    ((card->host->ios.timing == MMC_TIMING_UHS_SDR50) ||
-	      (card->host->ios.timing == MMC_TIMING_UHS_SDR104)))
+	     (card->host->ios.timing == MMC_TIMING_UHS_SDR104)))
 		err = mmc_execute_tuning(card);
 out:
 	return err;
@@ -687,8 +689,8 @@ try_again:
 		card->type = MMC_TYPE_SD_COMBO;
 
 		if (oldcard && (oldcard->type != MMC_TYPE_SD_COMBO ||
-		    memcmp(card->raw_cid, oldcard->raw_cid,
-					sizeof(card->raw_cid)) != 0)) {
+				memcmp(card->raw_cid, oldcard->raw_cid,
+				       sizeof(card->raw_cid)) != 0)) {
 			mmc_remove_card(card);
 			return -ENOENT;
 		}
@@ -876,7 +878,7 @@ try_again:
 	if (host->caps2 & MMC_CAP2_AVOID_3_3V &&
 	    host->ios.signal_voltage == MMC_SIGNAL_VOLTAGE_330) {
 		pr_err("%s: Host failed to negotiate down from 3.3V\n",
-			mmc_hostname(host));
+		       mmc_hostname(host));
 		err = -EINVAL;
 		goto remove;
 	}
@@ -916,7 +918,7 @@ static void mmc_sdio_remove(struct mmc_host *host)
 {
 	int i;
 
-	for (i = 0;i < host->card->sdio_funcs;i++) {
+	for (i = 0; i < host->card->sdio_funcs; i++) {
 		if (host->card->sdio_func[i]) {
 			sdio_remove_func(host->card->sdio_func[i]);
 			host->card->sdio_func[i] = NULL;
@@ -1065,7 +1067,12 @@ static int mmc_sdio_resume(struct mmc_host *host)
 		}
 		err = mmc_sdio_reinit_card(host, 0);
 	} else if (mmc_card_wake_sdio_irq(host)) {
-		/* We may have switched to 1-bit mode during suspend */
+		/*
+		 * We may have switched to 1-bit mode during suspend,
+		 * need to hold retuning, because tuning only supprt
+		 * 4-bit mode or 8 bit mode.
+		 */
+		mmc_retune_hold_now(host);
 		err = sdio_enable_4bit_bus(host->card);
 		if (err > 0) {
 			if (host->caps & MMC_CAP_8_BIT_DATA)
@@ -1186,7 +1193,6 @@ static const struct mmc_bus_ops mmc_sdio_ops = {
 	.sw_reset = mmc_sdio_sw_reset,
 };
 
-
 /*
  * Starting point for SDIO card init.
  */
@@ -1205,7 +1211,6 @@ int mmc_attach_sdio(struct mmc_host *host)
 	mmc_attach_bus(host, &mmc_sdio_ops);
 	if (host->ocr_avail_sdio)
 		host->ocr_avail = host->ocr_avail_sdio;
-
 
 	rocr = mmc_select_voltage(host, ocr);
 
@@ -1282,7 +1287,7 @@ int mmc_attach_sdio(struct mmc_host *host)
 	/*
 	 * ...then the SDIO functions.
 	 */
-	for (i = 0;i < funcs;i++) {
+	for (i = 0; i < funcs; i++) {
 		err = sdio_add_func(host->card->sdio_func[i]);
 		if (err)
 			goto remove_added;
@@ -1293,7 +1298,6 @@ int mmc_attach_sdio(struct mmc_host *host)
 
 	mmc_claim_host(host);
 	return 0;
-
 
 remove:
 	mmc_release_host(host);
@@ -1310,8 +1314,7 @@ err:
 	mmc_detach_bus(host);
 
 	pr_err("%s: error %d whilst initialising SDIO card\n",
-		mmc_hostname(host), err);
+	       mmc_hostname(host), err);
 
 	return err;
 }
-
