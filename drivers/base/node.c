@@ -116,10 +116,14 @@ static ssize_t node_read_meminfo(struct device *dev,
 		"Node %d AnonPages:      %8lu kB\n"
 		"Node %d Shmem:          %8lu kB\n"
 		"Node %d KernelStack:    %8lu kB\n"
+#ifdef CONFIG_SHADOW_CALL_STACK
+		"Node %d ShadowCallStack:%8lu kB\n"
+#endif
 		"Node %d PageTables:     %8lu kB\n"
 		"Node %d NFS_Unstable:   %8lu kB\n"
 		"Node %d Bounce:         %8lu kB\n"
 		"Node %d WritebackTmp:   %8lu kB\n"
+		"Node %d KReclaimable:   %8lu kB\n"
 		"Node %d Slab:           %8lu kB\n"
 		"Node %d SReclaimable:   %8lu kB\n"
 		"Node %d SUnreclaim:     %8lu kB\n"
