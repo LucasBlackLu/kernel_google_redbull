@@ -140,7 +140,7 @@ static void __exit_signal(struct task_struct *tsk)
 	struct signal_struct *sig = tsk->signal;
 	bool group_dead = thread_group_leader(tsk);
 	struct sighand_struct *sighand;
-	struct tty_struct *uninitialized_var(tty);
+	struct tty_struct *tty;
 	u64 utime, stime;
 
 	sighand = rcu_dereference_check(tsk->sighand,
@@ -594,8 +594,12 @@ static void exit_mm(void)
 	task_unlock(current);
 	mm_update_next_owner(mm);
 	mmput(mm);
+#ifdef CONFIG_ANDROID_SIMPLE_LMK
+	clear_thread_flag(TIF_MEMDIE);
+#else
 	if (test_thread_flag(TIF_MEMDIE))
 		exit_oom_victim();
+#endif
 }
 
 static struct task_struct *find_alive_thread(struct task_struct *p)
