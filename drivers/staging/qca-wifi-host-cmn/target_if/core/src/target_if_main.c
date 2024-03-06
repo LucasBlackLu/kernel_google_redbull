@@ -85,7 +85,7 @@
 
 static struct target_if_ctx *g_target_if_ctx;
 
-struct target_if_ctx *target_if_get_ctx()
+struct target_if_ctx *target_if_get_ctx(void)
 {
 	return g_target_if_ctx;
 }
@@ -186,8 +186,8 @@ QDF_STATUS target_if_deinit(void)
 
 qdf_export_symbol(target_if_deinit);
 
-QDF_STATUS target_if_store_pdev_target_if_ctx(
-		get_pdev_handle_callback pdev_hdl_cb)
+QDF_STATUS
+target_if_store_pdev_target_if_ctx(get_pdev_handle_callback pdev_hdl_cb)
 {
 	if (!g_target_if_ctx) {
 		QDF_ASSERT(0);
@@ -203,8 +203,8 @@ QDF_STATUS target_if_store_pdev_target_if_ctx(
 }
 
 #ifndef WLAN_OFFCHAN_TXRX_ENABLE
-static void target_if_offchan_txrx_ops_register(
-					struct wlan_lmac_if_tx_ops *tx_ops)
+static void
+target_if_offchan_txrx_ops_register(struct wlan_lmac_if_tx_ops *tx_ops)
 {
 }
 #endif /* WLAN_OFFCHAN_TXRX_ENABLE */
@@ -239,27 +239,25 @@ static void target_if_fd_tx_ops_register(struct wlan_lmac_if_tx_ops *tx_ops)
 #endif
 
 #ifdef WIFI_POS_CONVERGED
-static void target_if_wifi_pos_tx_ops_register(
-			struct wlan_lmac_if_tx_ops *tx_ops)
+static void
+target_if_wifi_pos_tx_ops_register(struct wlan_lmac_if_tx_ops *tx_ops)
 {
 	target_if_wifi_pos_register_tx_ops(tx_ops);
 }
 #else
-static void target_if_wifi_pos_tx_ops_register(
-			struct wlan_lmac_if_tx_ops *tx_ops)
+static void
+target_if_wifi_pos_tx_ops_register(struct wlan_lmac_if_tx_ops *tx_ops)
 {
 }
 #endif
 #ifdef QCA_SUPPORT_SON
-static void target_if_son_tx_ops_register(
-			struct wlan_lmac_if_tx_ops *tx_ops)
+static void target_if_son_tx_ops_register(struct wlan_lmac_if_tx_ops *tx_ops)
 {
 	target_if_son_register_tx_ops(tx_ops);
 	return;
 }
 #else
-static void target_if_son_tx_ops_register(
-			struct wlan_lmac_if_tx_ops *tx_ops)
+static void target_if_son_tx_ops_register(struct wlan_lmac_if_tx_ops *tx_ops)
 {
 	return;
 }
@@ -277,72 +275,66 @@ static void target_if_tdls_tx_ops_register(struct wlan_lmac_if_tx_ops *tx_ops)
 #endif /* FEATURE_WLAN_TDLS */
 
 #ifdef DFS_COMPONENT_ENABLE
-static void target_if_dfs_tx_ops_register(
-				struct wlan_lmac_if_tx_ops *tx_ops)
+static void target_if_dfs_tx_ops_register(struct wlan_lmac_if_tx_ops *tx_ops)
 {
 	target_if_register_dfs_tx_ops(tx_ops);
 }
 #else
-static void target_if_dfs_tx_ops_register(
-				struct wlan_lmac_if_tx_ops *tx_ops)
+static void target_if_dfs_tx_ops_register(struct wlan_lmac_if_tx_ops *tx_ops)
 {
 }
 #endif /* DFS_COMPONENT_ENABLE */
 
 #ifdef WLAN_CONV_SPECTRAL_ENABLE
-static void target_if_sptrl_tx_ops_register(
-				struct wlan_lmac_if_tx_ops *tx_ops)
+static void target_if_sptrl_tx_ops_register(struct wlan_lmac_if_tx_ops *tx_ops)
 {
 	target_if_sptrl_register_tx_ops(tx_ops);
 }
 #else
-static void target_if_sptrl_tx_ops_register(
-				struct wlan_lmac_if_tx_ops *tx_ops)
+static void target_if_sptrl_tx_ops_register(struct wlan_lmac_if_tx_ops *tx_ops)
 {
 }
 #endif /* WLAN_CONV_SPECTRAL_ENABLE */
 
 #ifdef DIRECT_BUF_RX_ENABLE
-static void target_if_direct_buf_rx_tx_ops_register(
-				struct wlan_lmac_if_tx_ops *tx_ops)
+static void
+target_if_direct_buf_rx_tx_ops_register(struct wlan_lmac_if_tx_ops *tx_ops)
 {
 	target_if_direct_buf_rx_register_tx_ops(tx_ops);
 }
 #else
-static void target_if_direct_buf_rx_tx_ops_register(
-				struct wlan_lmac_if_tx_ops *tx_ops)
+static void
+target_if_direct_buf_rx_tx_ops_register(struct wlan_lmac_if_tx_ops *tx_ops)
 {
 }
 #endif /* DIRECT_BUF_RX_ENABLE */
 
 #ifdef WLAN_SUPPORT_GREEN_AP
-static QDF_STATUS target_if_green_ap_tx_ops_register(
-				struct wlan_lmac_if_tx_ops *tx_ops)
+static QDF_STATUS
+target_if_green_ap_tx_ops_register(struct wlan_lmac_if_tx_ops *tx_ops)
 {
 	return target_if_register_green_ap_tx_ops(tx_ops);
 }
 #else
-static QDF_STATUS target_if_green_ap_tx_ops_register(
-				struct wlan_lmac_if_tx_ops *tx_ops)
+static QDF_STATUS
+target_if_green_ap_tx_ops_register(struct wlan_lmac_if_tx_ops *tx_ops)
 {
 	return QDF_STATUS_SUCCESS;
 }
 #endif /* WLAN_SUPPORT_GREEN_AP */
 #if defined(WLAN_CONV_CRYPTO_SUPPORTED) && defined(CRYPTO_SET_KEY_CONVERGED)
-static void target_if_crypto_tx_ops_register(
-				struct wlan_lmac_if_tx_ops *tx_ops)
+static void target_if_crypto_tx_ops_register(struct wlan_lmac_if_tx_ops *tx_ops)
 {
 	target_if_crypto_register_tx_ops(tx_ops);
 }
 #else
-static inline void target_if_crypto_tx_ops_register(
-				struct wlan_lmac_if_tx_ops *tx_ops)
+static inline void
+target_if_crypto_tx_ops_register(struct wlan_lmac_if_tx_ops *tx_ops)
 {
 }
 #endif
 
-static void target_if_target_tx_ops_register(
-		struct wlan_lmac_if_tx_ops *tx_ops)
+static void target_if_target_tx_ops_register(struct wlan_lmac_if_tx_ops *tx_ops)
 {
 	struct wlan_lmac_if_target_tx_ops *target_tx_ops;
 
@@ -353,26 +345,19 @@ static void target_if_target_tx_ops_register(
 
 	target_tx_ops = &tx_ops->target_tx_ops;
 
-	target_tx_ops->tgt_is_tgt_type_ar900b =
-		target_is_tgt_type_ar900b;
+	target_tx_ops->tgt_is_tgt_type_ar900b = target_is_tgt_type_ar900b;
 
-	target_tx_ops->tgt_is_tgt_type_ipq4019 =
-		target_is_tgt_type_ipq4019;
+	target_tx_ops->tgt_is_tgt_type_ipq4019 = target_is_tgt_type_ipq4019;
 
-	target_tx_ops->tgt_is_tgt_type_qca9984 =
-		target_is_tgt_type_qca9984;
+	target_tx_ops->tgt_is_tgt_type_qca9984 = target_is_tgt_type_qca9984;
 
-	target_tx_ops->tgt_is_tgt_type_qca9888 =
-		target_is_tgt_type_qca9888;
+	target_tx_ops->tgt_is_tgt_type_qca9888 = target_is_tgt_type_qca9888;
 
-	target_tx_ops->tgt_get_tgt_type =
-		lmac_get_tgt_type;
+	target_tx_ops->tgt_get_tgt_type = lmac_get_tgt_type;
 
-	target_tx_ops->tgt_get_tgt_version =
-		lmac_get_tgt_version;
+	target_tx_ops->tgt_get_tgt_version = lmac_get_tgt_version;
 
-	target_tx_ops->tgt_get_tgt_revision =
-		lmac_get_tgt_revision;
+	target_tx_ops->tgt_get_tgt_revision = lmac_get_tgt_revision;
 }
 
 static QDF_STATUS
@@ -396,19 +381,17 @@ target_if_vdev_mgr_tx_ops_register(struct wlan_lmac_if_tx_ops *tx_ops)
 #endif
 
 #ifdef QCA_WIFI_FTM
-static
-void target_if_ftm_tx_ops_register(struct wlan_lmac_if_tx_ops *tx_ops)
+static void target_if_ftm_tx_ops_register(struct wlan_lmac_if_tx_ops *tx_ops)
 {
 	target_if_ftm_register_tx_ops(tx_ops);
 }
 #else
-static
-void target_if_ftm_tx_ops_register(struct wlan_lmac_if_tx_ops *tx_ops)
+static void target_if_ftm_tx_ops_register(struct wlan_lmac_if_tx_ops *tx_ops)
 {
 }
 #endif
-static
-QDF_STATUS target_if_register_umac_tx_ops(struct wlan_lmac_if_tx_ops *tx_ops)
+static QDF_STATUS
+target_if_register_umac_tx_ops(struct wlan_lmac_if_tx_ops *tx_ops)
 {
 	/* call regulatory callback to register tx ops */
 	target_if_register_regulatory_tx_ops(tx_ops);

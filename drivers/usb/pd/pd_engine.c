@@ -40,18 +40,18 @@
 #include <../../power/supply/google/logbuffer.h>
 #include <../../power/supply/qcom/smb5-reg.h>
 
-#define LOG_BUFFER_ENTRIES	1024
-#define LOG_BUFFER_ENTRY_SIZE	256
+#define LOG_BUFFER_ENTRIES 1024
+#define LOG_BUFFER_ENTRY_SIZE 256
 
 #define EXT_VBUS_WORK_DELAY_MS 5000
-#define EXT_VBUS_OVERLAP_MS       7
+#define EXT_VBUS_OVERLAP_MS 7
 
 #define CMDLINE_BOOT_MODE_KEY "androidboot.mode"
 #define CHARGINGTEST_BOOT_MODE "chargingtest"
 #define CHARGER_BOOT_MODE "charger"
 #define CMDLINE_SUZYQ_KEY "usbcfg.suzyq"
 #define SUZYQ_ENABLED "enabled"
-#define CMDLINE_PARAM(k, v) ( k"="v )
+#define CMDLINE_PARAM(k, v) (k "=" v)
 
 #define OTG_ICL_VOTER "OTG_ICL_VOTER"
 #define OTG_DISABLE_APSD_VOTER "OTG_DISABLE_APSD_VOTER"
@@ -70,42 +70,42 @@ static char boot_mode_string[64];
 static char suzyq_enabled[15];
 
 struct usbpd {
-	struct device		dev;
+	struct device dev;
 
-	struct tcpm_port	*tcpm_port;
-	struct tcpc_dev		tcpc_dev;
+	struct tcpm_port *tcpm_port;
+	struct tcpc_dev tcpc_dev;
 
-	struct pd_phy_params	pdphy_params;
-	bool			pdphy_open;
+	struct pd_phy_params pdphy_params;
+	bool pdphy_open;
 
-	struct extcon_dev	*extcon;
+	struct extcon_dev *extcon;
 
-	struct power_supply	*usb_psy;
-	struct power_supply	*wireless_psy;
-	struct notifier_block	psy_nb;
+	struct power_supply *usb_psy;
+	struct power_supply *wireless_psy;
+	struct notifier_block psy_nb;
 
-	struct regulator	*vbus;
-	struct regulator	*vconn;
-	struct regulator        *ext_vbus;
-	struct notifier_block	hw_reg_nb;
-	bool			vbus_output;
-	bool			external_vbus;
-	bool			external_vbus_update;
-	bool			vconn_output;
+	struct regulator *vbus;
+	struct regulator *vconn;
+	struct regulator *ext_vbus;
+	struct notifier_block hw_reg_nb;
+	bool vbus_output;
+	bool external_vbus;
+	bool external_vbus_update;
+	bool vconn_output;
 
-	bool			vbus_present;
-	enum power_supply_type	psy_type;
-	enum typec_cc_status	cc1;
-	enum typec_cc_status	cc2;
-	bool			is_cable_flipped;
+	bool vbus_present;
+	enum power_supply_type psy_type;
+	enum typec_cc_status cc1;
+	enum typec_cc_status cc2;
+	bool is_cable_flipped;
 
-	bool			pending_update_usb_data;
-	bool			extcon_usb;
-	bool			extcon_usb_host;
-	bool			extcon_usb_cc;
+	bool pending_update_usb_data;
+	bool extcon_usb;
+	bool extcon_usb_host;
+	bool extcon_usb_cc;
 
-	struct mutex		lock; /* struct usbpd access lock */
-	struct workqueue_struct	*wq;
+	struct mutex lock; /* struct usbpd access lock */
+	struct workqueue_struct *wq;
 
 	enum typec_role cur_pwr_role;
 	enum typec_data_role cur_data_role;
@@ -143,7 +143,7 @@ struct usbpd {
 
 	bool fixed_pdo_5V3A;
 	bool limit_sink_enable;
-	unsigned int limit_sink_current;	/* uA */
+	unsigned int limit_sink_current; /* uA */
 
 	bool in_explicit_contract;
 
@@ -176,9 +176,8 @@ static int pd_engine_debugfs_init(struct usbpd *pd)
 			return -ENOMEM;
 	}
 
-	if (!debugfs_create_u8("always_enable_data",
-				0600, pd->rootdir,
-				&always_enable_data)) {
+	if (!debugfs_create_u8("always_enable_data", 0600, pd->rootdir,
+			       &always_enable_data)) {
 		dev_err(&pd->dev, "Failed to create data path debug");
 		return -EAGAIN;
 	}
@@ -192,8 +191,8 @@ static void pd_engine_debugfs_exit(struct usbpd *pd)
 }
 #endif /* CONFIG_DEBUG_FS */
 
-static const char * const get_typec_mode_name(
-		enum power_supply_typec_mode typec_mode)
+static const char *const
+get_typec_mode_name(enum power_supply_typec_mode typec_mode)
 {
 	switch (typec_mode) {
 	case POWER_SUPPLY_TYPEC_NONE:
@@ -233,7 +232,7 @@ static const char * const get_typec_mode_name(
 	}
 }
 
-static const char * const get_psy_type_name(enum power_supply_type psy_type)
+static const char *const get_psy_type_name(enum power_supply_type psy_type)
 {
 	switch (psy_type) {
 	case POWER_SUPPLY_TYPE_UNKNOWN:
@@ -262,8 +261,8 @@ enum typec_cc_orientation {
 	TYPEC_CC_ORIENTATION_CC2 = 2,
 };
 
-static const char * const get_typec_cc_orientation_name(
-		enum typec_cc_orientation typec_cc_orientation)
+static const char *const
+get_typec_cc_orientation_name(enum typec_cc_orientation typec_cc_orientation)
 {
 	switch (typec_cc_orientation) {
 	case TYPEC_CC_ORIENTATION_NONE:
@@ -277,8 +276,8 @@ static const char * const get_typec_cc_orientation_name(
 	}
 }
 
-static const char * const get_typec_cc_status_name(
-		enum typec_cc_status cc_status)
+static const char *const
+get_typec_cc_status_name(enum typec_cc_status cc_status)
 {
 	switch (cc_status) {
 	case TYPEC_CC_OPEN:
@@ -301,10 +300,10 @@ static const char * const get_typec_cc_status_name(
 /*
  * parses the type-c mode to cc pin status in the orientation_none special case.
  */
-static void parse_cc_status_none_orientation(
-		enum power_supply_typec_mode typec_mode,
-		enum typec_cc_status *cc1,
-		enum typec_cc_status *cc2)
+static void
+parse_cc_status_none_orientation(enum power_supply_typec_mode typec_mode,
+				 enum typec_cc_status *cc1,
+				 enum typec_cc_status *cc2)
 {
 	switch (typec_mode) {
 	case POWER_SUPPLY_TYPEC_SINK_DEBUG_ACCESSORY:
@@ -331,10 +330,10 @@ static void parse_cc_status_none_orientation(
 /*
  * parses the type-c mode to the status of the active and inactive cc pin.
  */
-static void parse_cc_status_active_inactive(
-		enum power_supply_typec_mode typec_mode,
-		enum typec_cc_status *cc_active,
-		enum typec_cc_status *cc_inactive)
+static void
+parse_cc_status_active_inactive(enum power_supply_typec_mode typec_mode,
+				enum typec_cc_status *cc_active,
+				enum typec_cc_status *cc_inactive)
 {
 	switch (typec_mode) {
 	case POWER_SUPPLY_TYPEC_NONE:
@@ -436,12 +435,12 @@ static int update_extcon_prop(struct usbpd *pd, int extcon_type)
 
 	val.intval = pd->extcon_usb_cc ? 1 : 0;
 	ret = extcon_set_property(pd->extcon, extcon_type,
-				  EXTCON_PROP_USB_TYPEC_POLARITY,
-				  val);
+				  EXTCON_PROP_USB_TYPEC_POLARITY, val);
 	if (ret < 0) {
-		logbuffer_log(pd->log,
-			      "unable to set extcon usb polarity prop [%s], ret=%d",
-			      pd->extcon_usb_cc ? "Y" : "N", ret);
+		logbuffer_log(
+			pd->log,
+			"unable to set extcon usb polarity prop [%s], ret=%d",
+			pd->extcon_usb_cc ? "Y" : "N", ret);
 		return ret;
 	}
 
@@ -454,25 +453,24 @@ static int update_extcon_prop(struct usbpd *pd, int extcon_type)
 	else
 		val.intval = 1;
 
-	ret = extcon_set_property(pd->extcon, extcon_type,
-				  EXTCON_PROP_USB_SS,
+	ret = extcon_set_property(pd->extcon, extcon_type, EXTCON_PROP_USB_SS,
 				  val);
 	if (ret < 0) {
 		logbuffer_log(pd->log,
-			      "unable to set extcon usb ss prop, ret=%d",
-			      ret);
+			      "unable to set extcon usb ss prop, ret=%d", ret);
 		return ret;
 	}
 
 	if (extcon_type == EXTCON_USB) {
 		val.intval = pd->pd_capable ? 1 : 0;
-		ret = extcon_set_property(pd->extcon, extcon_type,
-					EXTCON_PROP_USB_TYPEC_MED_HIGH_CURRENT,
-					val);
+		ret = extcon_set_property(
+			pd->extcon, extcon_type,
+			EXTCON_PROP_USB_TYPEC_MED_HIGH_CURRENT, val);
 		if (ret < 0) {
-			logbuffer_log(pd->log,
-				      "unable to set extcon usb typec med high current, ret=%d",
-				      ret);
+			logbuffer_log(
+				pd->log,
+				"unable to set extcon usb typec med high current, ret=%d",
+				ret);
 		}
 	}
 
@@ -490,10 +488,9 @@ static int update_usb_data_role(struct usbpd *pd)
 	 * update_usb_data_role() is called when APSD is done, thus here
 	 * pd->psy_type is a valid detection result.
 	 */
-	extcon_usb = pd->extcon_usb &&
-		     (psy_support_usb_data(pd->psy_type) ||
-		      pd->usb_comm_capable ||
-		      always_enable_data);
+	extcon_usb =
+		pd->extcon_usb && (psy_support_usb_data(pd->psy_type) ||
+				   pd->usb_comm_capable || always_enable_data);
 
 	/*
 	 * EXTCON_USB_HOST and EXTCON_USB is mutually exlusive.
@@ -503,22 +500,23 @@ static int update_usb_data_role(struct usbpd *pd)
 	 */
 	if (!pd->extcon_usb_host) {
 		ret = extcon_set_state_sync(pd->extcon, EXTCON_USB_HOST,
-					      pd->extcon_usb_host);
+					    pd->extcon_usb_host);
 		if (ret < 0) {
-			logbuffer_log(pd->log,
-				      "unable to turn off extcon usb host, ret=%d",
-				      ret);
+			logbuffer_log(
+				pd->log,
+				"unable to turn off extcon usb host, ret=%d",
+				ret);
 			return ret;
 		}
 	}
 
 	if (!extcon_usb) {
-		ret = extcon_set_state_sync(pd->extcon, EXTCON_USB,
-					      extcon_usb);
+		ret = extcon_set_state_sync(pd->extcon, EXTCON_USB, extcon_usb);
 		if (ret < 0) {
-			logbuffer_log(pd->log,
-				      "unable to turn off extcon usb device, ret=%d",
-				      ret);
+			logbuffer_log(
+				pd->log,
+				"unable to turn off extcon usb device, ret=%d",
+				ret);
 			return ret;
 		}
 	}
@@ -530,14 +528,14 @@ static int update_usb_data_role(struct usbpd *pd)
 	BUG_ON(extcon_usb && pd->extcon_usb_host);
 
 	if (extcon_usb || pd->extcon_usb_host) {
-		ret = update_extcon_prop(pd, extcon_usb ?
-					 EXTCON_USB : EXTCON_USB_HOST);
+		ret = update_extcon_prop(pd, extcon_usb ? EXTCON_USB :
+							  EXTCON_USB_HOST);
 		if (ret < 0)
 			return ret;
 
-		ret = extcon_set_state_sync(pd->extcon, extcon_usb ?
-					    EXTCON_USB : EXTCON_USB_HOST,
-					    1);
+		ret = extcon_set_state_sync(
+			pd->extcon, extcon_usb ? EXTCON_USB : EXTCON_USB_HOST,
+			1);
 		if (ret < 0) {
 			logbuffer_log(pd->log,
 				      "unable to turn on extcon [%s], ret=%d",
@@ -546,11 +544,9 @@ static int update_usb_data_role(struct usbpd *pd)
 		}
 	}
 
-	logbuffer_log(pd->log,
-		      "usb extcon: cc [%s], host [%s], usb [%s]",
+	logbuffer_log(pd->log, "usb extcon: cc [%s], host [%s], usb [%s]",
 		      pd->extcon_usb_cc ? "Y" : "N",
-		      pd->extcon_usb_host ? "Y" : "N",
-		      extcon_usb ? "Y" : "N");
+		      pd->extcon_usb_host ? "Y" : "N", extcon_usb ? "Y" : "N");
 
 	return ret;
 }
@@ -566,37 +562,35 @@ static int pd_regulator_update(struct usbpd *pd, bool external_reg, bool on)
 
 	if (on) {
 		if (external_reg)
-			ret = regulator_set_voltage(pd->ext_vbus,
-						    5000000, 5000000);
+			ret = regulator_set_voltage(pd->ext_vbus, 5000000,
+						    5000000);
 
-		ret = regulator_enable(external_reg ? pd->ext_vbus
-				       : pd->vbus);
+		ret = regulator_enable(external_reg ? pd->ext_vbus : pd->vbus);
 		if (ret) {
-			logbuffer_log(pd->log,
-				      "update_vbus_locked: unable to turn on %s vbus ret = %d"
-				      , external_reg ? "external" : "pmic"
-				      , ret);
+			logbuffer_log(
+				pd->log,
+				"update_vbus_locked: unable to turn on %s vbus ret = %d",
+				external_reg ? "external" : "pmic", ret);
 			return ret;
 		} else {
-			logbuffer_log(pd->log,
-				      "update_vbus_locked: turned on %s vbus ret = %d"
-				      , external_reg ? "external" : "pmic"
-				      , ret);
+			logbuffer_log(
+				pd->log,
+				"update_vbus_locked: turned on %s vbus ret = %d",
+				external_reg ? "external" : "pmic", ret);
 		}
 	} else {
-		ret = regulator_disable(external_reg ? pd->ext_vbus
-					: pd->vbus);
+		ret = regulator_disable(external_reg ? pd->ext_vbus : pd->vbus);
 		if (ret) {
-			logbuffer_log(pd->log,
-				      "update_vbus_locked: unable to turn off %s vbus ret = %d"
-				      , external_reg ? "external" : "pmic"
-				      , ret);
+			logbuffer_log(
+				pd->log,
+				"update_vbus_locked: unable to turn off %s vbus ret = %d",
+				external_reg ? "external" : "pmic", ret);
 			return ret;
 		} else {
-			logbuffer_log(pd->log,
-				      "update_vbus_locked: turned off %s vbus ret = %d"
-				      , external_reg ? "external" : "pmic"
-				      , ret);
+			logbuffer_log(
+				pd->log,
+				"update_vbus_locked: turned off %s vbus ret = %d",
+				external_reg ? "external" : "pmic", ret);
 		}
 	}
 
@@ -617,11 +611,9 @@ static int update_vbus_locked(struct usbpd *pd, bool vbus_output)
 
 	pd->external_vbus = pd->wireless_online ? true : false;
 
-	logbuffer_log(pd->log,
-		      "%s: vbus_output: %c wireless_online: %c"
-		      , __func__
-		      , vbus_output ? 'Y' : 'N', pd->wireless_online ?
-		      'Y' : 'N');
+	logbuffer_log(pd->log, "%s: vbus_output: %c wireless_online: %c",
+		      __func__, vbus_output ? 'Y' : 'N',
+		      pd->wireless_online ? 'Y' : 'N');
 
 	if (vbus_output) {
 		ret = pd_regulator_update(pd, pd->external_vbus, true);
@@ -666,10 +658,12 @@ void update_external_vbus(struct work_struct *work)
 	 * update the value and exit when vbus is not on.
 	 */
 	if (pd->external_vbus == pd->external_vbus_update || !pd->vbus_output) {
-		logbuffer_log(pd->log,
-			      "skipping update value changed: %c vbus_output: %c"
-			      , pd->external_vbus == pd->external_vbus_update ?
-			       'Y' : 'N', pd->vbus_output ? 'Y' : 'N');
+		logbuffer_log(
+			pd->log,
+			"skipping update value changed: %c vbus_output: %c",
+			pd->external_vbus == pd->external_vbus_update ? 'Y' :
+									'N',
+			pd->vbus_output ? 'Y' : 'N');
 		goto exit;
 	}
 
@@ -701,13 +695,12 @@ err:
 
 static int fast_role_swap_set(struct usbpd *pd, bool enable)
 {
-	union power_supply_propval val = {0};
+	union power_supply_propval val = { 0 };
 	int ret;
 
 	val.intval = enable ? 1 : 0;
-	ret = power_supply_set_property(pd->usb_psy,
-					POWER_SUPPLY_PROP_OTG_FASTROLESWAP,
-					&val);
+	ret = power_supply_set_property(
+		pd->usb_psy, POWER_SUPPLY_PROP_OTG_FASTROLESWAP, &val);
 
 	if (ret < 0) {
 		logbuffer_log(pd->log, "unable to %s FASTROLESWAP, ret=%d",
@@ -741,8 +734,8 @@ static int update_wireless_locked(struct usbpd *pd, bool wireless_online)
 		/* Setting different src_cap depending on wireless status */
 		schedule_work(&pd->update_pdo_work);
 
-		if (pd->wireless_online && pd->vbus_output
-		    && !pd->external_vbus) {
+		if (pd->wireless_online && pd->vbus_output &&
+		    !pd->external_vbus) {
 			/* Turn off internal vbus */
 			if (pd_regulator_update(pd, false, false))
 				return -EAGAIN;
@@ -755,9 +748,8 @@ static int update_wireless_locked(struct usbpd *pd, bool wireless_online)
 	}
 
 	/* Wireless charging enabled when high power usb device is connected */
-	if (pd->vbus_output && !pd->external_vbus
-	    && pd->wireless_online && !pd->low_power_udev) {
-
+	if (pd->vbus_output && !pd->external_vbus && pd->wireless_online &&
+	    !pd->low_power_udev) {
 		/* Turn off internal vbus */
 		if (pd_regulator_update(pd, false, false))
 			return -EAGAIN;
@@ -778,12 +770,10 @@ static int update_wireless_locked(struct usbpd *pd, bool wireless_online)
 		if (update_usb_data_role(pd))
 			return -EAGAIN;
 
-		logbuffer_log(pd->log,
-			      "psy_changed: swiched to external vbus");
-	/* Wireless charging enabled when low power usb device is connected */
-	} else if (pd->vbus_output && !pd->external_vbus
-		   && pd->wireless_online && pd->low_power_udev) {
-
+		logbuffer_log(pd->log, "psy_changed: swiched to external vbus");
+		/* Wireless charging enabled when low power usb device is connected */
+	} else if (pd->vbus_output && !pd->external_vbus &&
+		   pd->wireless_online && pd->low_power_udev) {
 		/* Turn on external vbus */
 		if (pd_regulator_update(pd, true, true))
 			return -EAGAIN;
@@ -794,11 +784,11 @@ static int update_wireless_locked(struct usbpd *pd, bool wireless_online)
 		/* Turn off internal vbus */
 		if (pd_regulator_update(pd, false, false))
 			return -EAGAIN;
-	/* Wireless charging disabled. Switch back to internal pmic when
+		/* Wireless charging disabled. Switch back to internal pmic when
 	 * wireless charging is disabled.
 	 */
-	} else if (!pd->wireless_online && pd->vbus_output
-		   && pd->external_vbus) {
+	} else if (!pd->wireless_online && pd->vbus_output &&
+		   pd->external_vbus) {
 		fast_role_swap_set(pd, true);
 
 		/* Turn on internal vbus */
@@ -813,16 +803,15 @@ static int update_wireless_locked(struct usbpd *pd, bool wireless_online)
 		/* Turn off external vbus */
 		if (pd_regulator_update(pd, true, false))
 			ret = -EAGAIN;
-clear:
+	clear:
 		fast_role_swap_set(pd, false);
-
 	}
 	return ret;
 }
 
-#define PDO_FIXED_FLAGS \
-	(PDO_FIXED_DUAL_ROLE | PDO_FIXED_SUSPEND \
-	 | PDO_FIXED_DATA_SWAP | PDO_FIXED_USB_COMM)
+#define PDO_FIXED_FLAGS                                                        \
+	(PDO_FIXED_DUAL_ROLE | PDO_FIXED_SUSPEND | PDO_FIXED_DATA_SWAP |       \
+	 PDO_FIXED_USB_COMM)
 
 static void update_src_caps(struct work_struct *work)
 {
@@ -833,8 +822,7 @@ static void update_src_caps(struct work_struct *work)
 		vote(pd->src_cap_votable, WIRELESS_SRC_CAP_VOTER, true,
 		     WIRELESS_SRC_CUR_MA);
 		pd->default_src_cap = false;
-	} else if (!pd->wireless_online &&
-		   !pd->vbus_output  &&
+	} else if (!pd->wireless_online && !pd->vbus_output &&
 		   !pd->default_src_cap) {
 		logbuffer_log(pd->log, "default src_cap");
 		vote(pd->src_cap_votable, WIRELESS_SRC_CAP_VOTER, false, 0);
@@ -843,8 +831,7 @@ static void update_src_caps(struct work_struct *work)
 }
 
 static int pd_switch_src_cap_callback(struct votable *votable, void *data,
-				      int cur_ma,
-				      const char *client)
+				      int cur_ma, const char *client)
 {
 	struct usbpd *pd = data;
 	unsigned int nr_pdo;
@@ -879,9 +866,8 @@ static int pd_switch_src_cap_callback(struct votable *votable, void *data,
 
 static void psy_changed_handler(struct work_struct *work)
 {
-	struct psy_changed_event *event = container_of(work,
-						       struct psy_changed_event,
-						       work);
+	struct psy_changed_event *event =
+		container_of(work, struct psy_changed_event, work);
 	struct usbpd *pd = event->pd;
 	bool vbus_present;
 	enum typec_cc_status cc1;
@@ -907,11 +893,10 @@ static void psy_changed_handler(struct work_struct *work)
 	}
 	typec_mode = val.intval;
 
-	ret = power_supply_get_property(pd->usb_psy,
-					POWER_SUPPLY_PROP_PE_START, &val);
+	ret = power_supply_get_property(pd->usb_psy, POWER_SUPPLY_PROP_PE_START,
+					&val);
 	if (ret < 0) {
-		logbuffer_log(pd->log, "Unable to read PE_START, ret=%d",
-			      ret);
+		logbuffer_log(pd->log, "Unable to read PE_START, ret=%d", ret);
 		goto free;
 	}
 	pe_start = !!val.intval;
@@ -924,18 +909,16 @@ static void psy_changed_handler(struct work_struct *work)
 	}
 	psy_type = val.intval;
 
-	ret = power_supply_get_property(pd->usb_psy,
-					POWER_SUPPLY_PROP_PRESENT, &val);
+	ret = power_supply_get_property(pd->usb_psy, POWER_SUPPLY_PROP_PRESENT,
+					&val);
 	if (ret < 0) {
-		logbuffer_log(pd->log, "Unable to read ONLINE, ret=%d",
-			      ret);
+		logbuffer_log(pd->log, "Unable to read ONLINE, ret=%d", ret);
 		goto free;
 	}
 	vbus_present = val.intval;
 
-	ret = power_supply_get_property(pd->usb_psy,
-					POWER_SUPPLY_PROP_TYPEC_CC_ORIENTATION,
-					&val);
+	ret = power_supply_get_property(
+		pd->usb_psy, POWER_SUPPLY_PROP_TYPEC_CC_ORIENTATION, &val);
 	if (ret < 0) {
 		logbuffer_log(pd->log,
 			      "Unable to read TYPEC_CC_ORIENTATION, ret=%d",
@@ -946,12 +929,12 @@ static void psy_changed_handler(struct work_struct *work)
 
 	if (pd->wlc_supported) {
 		ret = power_supply_get_property(pd->wireless_psy,
-						POWER_SUPPLY_PROP_ONLINE,
-						&val);
+						POWER_SUPPLY_PROP_ONLINE, &val);
 		if (ret < 0) {
-			logbuffer_log(pd->log,
-				      "Unable to read wireless online property, ret=%d",
-				      ret);
+			logbuffer_log(
+				pd->log,
+				"Unable to read wireless online property, ret=%d",
+				ret);
 			goto free;
 		}
 		wireless_online = val.intval ? true : false;
@@ -959,17 +942,15 @@ static void psy_changed_handler(struct work_struct *work)
 
 	parse_cc_status(typec_mode, typec_cc_orientation, &cc1, &cc2);
 
-	logbuffer_log(pd->log,
-		      "type [%s], pe_start [%s], vbus_present [%s], mode [%s], orientation [%s], cc1 [%s], cc2 [%s], external_vbus_update [%s], wireless_online [%s]",
-		      get_psy_type_name(psy_type),
-		      pe_start ? "Y" : "N",
-		      vbus_present ? "Y" : "N",
-		      get_typec_mode_name(typec_mode),
-		      get_typec_cc_orientation_name(typec_cc_orientation),
-		      get_typec_cc_status_name(cc1),
-		      get_typec_cc_status_name(cc2),
-		      pd->external_vbus_update ? "Y" : "N",
-		      wireless_online ? "Y" : "N");
+	logbuffer_log(
+		pd->log,
+		"type [%s], pe_start [%s], vbus_present [%s], mode [%s], orientation [%s], cc1 [%s], cc2 [%s], external_vbus_update [%s], wireless_online [%s]",
+		get_psy_type_name(psy_type), pe_start ? "Y" : "N",
+		vbus_present ? "Y" : "N", get_typec_mode_name(typec_mode),
+		get_typec_cc_orientation_name(typec_cc_orientation),
+		get_typec_cc_status_name(cc1), get_typec_cc_status_name(cc2),
+		pd->external_vbus_update ? "Y" : "N",
+		wireless_online ? "Y" : "N");
 
 	mutex_lock(&pd->lock);
 
@@ -978,9 +959,9 @@ static void psy_changed_handler(struct work_struct *work)
 
 	/* Dont proceed as pmi might still be evaluating connections */
 	if (!pe_start && !pd->pd_capable &&
-			  psy_type == POWER_SUPPLY_TYPE_UNKNOWN &&
-			  typec_mode != POWER_SUPPLY_TYPEC_NONE &&
-			  typec_mode != POWER_SUPPLY_TYPEC_SINK_AUDIO_ADAPTER) {
+	    psy_type == POWER_SUPPLY_TYPE_UNKNOWN &&
+	    typec_mode != POWER_SUPPLY_TYPEC_NONE &&
+	    typec_mode != POWER_SUPPLY_TYPEC_SINK_AUDIO_ADAPTER) {
 		logbuffer_log(pd->log,
 			      "Skipping update as PE_START not set yet");
 		goto unlock;
@@ -1013,7 +994,7 @@ static void psy_changed_handler(struct work_struct *work)
 
 		/* fake CC for SuzyQ cables */
 		if (!strncmp(suzyq_enabled, SUZYQ_ENABLED,
-		    strlen(SUZYQ_ENABLED)) &&
+			     strlen(SUZYQ_ENABLED)) &&
 		    typec_mode == POWER_SUPPLY_TYPEC_DAM_MEDIUM)
 			parse_cc_status(POWER_SUPPLY_TYPEC_SOURCE_DEFAULT,
 					typec_cc_orientation, &cc1, &cc2);
@@ -1047,8 +1028,8 @@ static int psy_changed(struct notifier_block *nb, unsigned long evt, void *ptr)
 	if (ptr == pd->wireless_psy)
 		logbuffer_log(pd->log, "wireless supply changed");
 
-	if (!((ptr == pd->usb_psy || ptr == pd->wireless_psy)
-	    && evt == PSY_EVENT_PROP_CHANGED))
+	if (!((ptr == pd->usb_psy || ptr == pd->wireless_psy) &&
+	      evt == PSY_EVENT_PROP_CHANGED))
 		return 0;
 	else
 		logbuffer_log(pd->log, "supply changed\n");
@@ -1078,34 +1059,31 @@ static int tcpm_get_vbus(struct tcpc_dev *dev)
 	mutex_lock(&pd->lock);
 
 	vbus_on = pd->vbus_present || pd->vbus_output;
-	logbuffer_log(pd->log, "%s: %s", __func__,
-		      vbus_on ? "True" : "False");
+	logbuffer_log(pd->log, "%s: %s", __func__, vbus_on ? "True" : "False");
 	ret = vbus_on ? 1 : 0;
 
 	mutex_unlock(&pd->lock);
 	return ret;
 }
 
-#define cc_is_sink(cc) \
-	((cc) == TYPEC_CC_RP_DEF || (cc) == TYPEC_CC_RP_1_5 || \
+#define cc_is_sink(cc)                                                         \
+	((cc) == TYPEC_CC_RP_DEF || (cc) == TYPEC_CC_RP_1_5 ||                 \
 	 (cc) == TYPEC_CC_RP_3_0)
 
-#define port_is_sink(port) \
-	((cc_is_sink((port)->cc1) && !cc_is_sink((port)->cc2)) || \
+#define port_is_sink(port)                                                     \
+	((cc_is_sink((port)->cc1) && !cc_is_sink((port)->cc2)) ||              \
 	 (cc_is_sink((port)->cc2) && !cc_is_sink((port)->cc1)))
 
 #define cc_is_source(cc) ((cc) == TYPEC_CC_RD)
 
-#define port_is_source(port) \
-	((cc_is_source((port)->cc1) && \
-	 !cc_is_source((port)->cc2)) || \
-	 (cc_is_source((port)->cc2) && \
-	  !cc_is_source((port)->cc1)))
+#define port_is_source(port)                                                   \
+	((cc_is_source((port)->cc1) && !cc_is_source((port)->cc2)) ||          \
+	 (cc_is_source((port)->cc2) && !cc_is_source((port)->cc1)))
 
 static int tcpm_set_cc(struct tcpc_dev *dev, enum typec_cc_status cc)
 {
-	union power_supply_propval val = {0};
-	union power_supply_propval rp_val = {0};
+	union power_supply_propval val = { 0 };
+	union power_supply_propval rp_val = { 0 };
 	struct usbpd *pd = container_of(dev, struct usbpd, tcpc_dev);
 	int ret = 0;
 
@@ -1136,15 +1114,12 @@ static int tcpm_set_cc(struct tcpc_dev *dev, enum typec_cc_status cc)
 		goto unlock;
 	}
 
-	if (cc == TYPEC_CC_RP_DEF ||
-	    cc == TYPEC_CC_RP_1_5 ||
+	if (cc == TYPEC_CC_RP_DEF || cc == TYPEC_CC_RP_1_5 ||
 	    cc == TYPEC_CC_RP_3_0) {
-		ret = power_supply_set_property(pd->usb_psy,
-						POWER_SUPPLY_PROP_TYPEC_SRC_RP,
-						&rp_val);
+		ret = power_supply_set_property(
+			pd->usb_psy, POWER_SUPPLY_PROP_TYPEC_SRC_RP, &rp_val);
 		if (ret < 0) {
-			logbuffer_log(pd->log, "unable to set Rp, ret=%d",
-				      ret);
+			logbuffer_log(pd->log, "unable to set Rp, ret=%d", ret);
 		} else {
 			logbuffer_log(pd->log, "set Rp to %s",
 				      get_typec_cc_status_name(cc));
@@ -1170,9 +1145,10 @@ static int tcpm_set_cc(struct tcpc_dev *dev, enum typec_cc_status cc)
 		   cc == TYPEC_CC_OPEN ? true : false, 0);
 
 	if (ret < 0) {
-		logbuffer_log(pd->log,
-			      "unable to vote DISABLE_POWER_ROLE_SWITCH to %s, ret=%d",
-			      cc == TYPEC_CC_OPEN ? true : false, ret);
+		logbuffer_log(
+			pd->log,
+			"unable to vote DISABLE_POWER_ROLE_SWITCH to %s, ret=%d",
+			cc == TYPEC_CC_OPEN ? true : false, ret);
 		goto unlock;
 	}
 
@@ -1181,9 +1157,8 @@ static int tcpm_set_cc(struct tcpc_dev *dev, enum typec_cc_status cc)
 	 * if we are going to set cc to Open.
 	 */
 	if (cc != TYPEC_CC_OPEN) {
-		ret = power_supply_set_property(pd->usb_psy,
-					POWER_SUPPLY_PROP_TYPEC_POWER_ROLE,
-					&val);
+		ret = power_supply_set_property(
+			pd->usb_psy, POWER_SUPPLY_PROP_TYPEC_POWER_ROLE, &val);
 		if (ret < 0)
 			logbuffer_log(pd->log,
 				      "unable to set POWER_ROLE to %d, ret=%d",
@@ -1272,8 +1247,8 @@ static int tcpm_set_vbus(struct tcpc_dev *dev, bool on, bool charge)
 			goto unlock;
 		}
 		/* disable APSD */
-		ret = vote(pd->apsd_disable_votable,
-			   OTG_DISABLE_APSD_VOTER, true, 0);
+		ret = vote(pd->apsd_disable_votable, OTG_DISABLE_APSD_VOTER,
+			   true, 0);
 		if (ret < 0) {
 			logbuffer_log(pd->log, "vote apsd_disable fail, ret %d",
 				      ret);
@@ -1281,12 +1256,11 @@ static int tcpm_set_vbus(struct tcpc_dev *dev, bool on, bool charge)
 		}
 	} else {
 		/* enable APSD */
-		ret = vote(pd->apsd_disable_votable,
-			   OTG_DISABLE_APSD_VOTER, false, 0);
+		ret = vote(pd->apsd_disable_votable, OTG_DISABLE_APSD_VOTER,
+			   false, 0);
 		if (ret < 0) {
 			logbuffer_log(pd->log,
-				      "unvote apsd_disable fail, ret %d",
-				      ret);
+				      "unvote apsd_disable fail, ret %d", ret);
 			goto vote_icl_default;
 		}
 		/* enable charging */
@@ -1311,15 +1285,13 @@ static int tcpm_set_vbus(struct tcpc_dev *dev, bool on, bool charge)
 		goto vote_apsd_default;
 
 	logbuffer_log(pd->log, "set vbus: %s, apsd: %s, icl: %d",
-		      on ? "on" : "off",
-		      apsd_disabled ? "disabled" : "enabled",
+		      on ? "on" : "off", apsd_disabled ? "disabled" : "enabled",
 		      usb_icl);
 	goto unlock;
 
 vote_apsd_default:
 	/* enable APSD by default */
-	ret = vote(pd->apsd_disable_votable,
-		   OTG_DISABLE_APSD_VOTER, false, 0);
+	ret = vote(pd->apsd_disable_votable, OTG_DISABLE_APSD_VOTER, false, 0);
 	if (ret < 0)
 		logbuffer_log(pd->log, "unvote apsd_disable fail, ret %d", ret);
 vote_icl_default:
@@ -1334,7 +1306,7 @@ unlock:
 
 static int tcpm_set_current_limit(struct tcpc_dev *dev, u32 max_ma, u32 mv)
 {
-	union power_supply_propval val = {0};
+	union power_supply_propval val = { 0 };
 	struct usbpd *pd = container_of(dev, struct usbpd, tcpc_dev);
 	int ret = 0;
 
@@ -1343,19 +1315,17 @@ static int tcpm_set_current_limit(struct tcpc_dev *dev, u32 max_ma, u32 mv)
 
 	val.intval = mv * 1000;
 	ret = power_supply_set_property(pd->usb_psy,
-					POWER_SUPPLY_PROP_PD_VOLTAGE_MAX,
-					&val);
+					POWER_SUPPLY_PROP_PD_VOLTAGE_MAX, &val);
 	if (ret < 0) {
 		logbuffer_log(pd->log,
-			      "unable to set max voltage to %d, ret=%d",
-			      mv, ret);
+			      "unable to set max voltage to %d, ret=%d", mv,
+			      ret);
 		return ret;
 	}
 
 	val.intval = max_ma * 1000;
 	ret = power_supply_set_property(pd->usb_psy,
-					POWER_SUPPLY_PROP_PD_CURRENT_MAX,
-					&val);
+					POWER_SUPPLY_PROP_PD_CURRENT_MAX, &val);
 	if (ret < 0) {
 		logbuffer_log(pd->log,
 			      "unable to set pd current max to %d, ret=%d",
@@ -1420,8 +1390,8 @@ static int get_data_len(__le16 header)
 	return ret;
 }
 
-static const char * const get_tcpm_transmit_type_name(
-		enum tcpm_transmit_type type)
+static const char *const
+get_tcpm_transmit_type_name(enum tcpm_transmit_type type)
 {
 	switch (type) {
 	case TCPC_TX_SOP:
@@ -1452,8 +1422,8 @@ struct pd_transmit_work {
 	struct pd_message msg;
 };
 
-static const char * const get_tcpm_transmit_status_name(
-		enum tcpm_transmit_status status)
+static const char *const
+get_tcpm_transmit_status_name(enum tcpm_transmit_status status)
 {
 	switch (status) {
 	case TCPC_TX_SUCCESS:
@@ -1469,9 +1439,8 @@ static const char * const get_tcpm_transmit_status_name(
 
 static void pd_transmit_handler(struct work_struct *work)
 {
-	struct pd_transmit_work *pd_tx_work = container_of(work,
-					struct pd_transmit_work,
-					work);
+	struct pd_transmit_work *pd_tx_work =
+		container_of(work, struct pd_transmit_work, work);
 	struct usbpd *pd = pd_tx_work->pd;
 	enum tcpm_transmit_type type = pd_tx_work->type;
 	struct pd_message *msg = &pd_tx_work->msg;
@@ -1490,20 +1459,17 @@ static void pd_transmit_handler(struct work_struct *work)
 		break;
 	case TCPC_TX_SOP:
 		ret = pd_phy_write(msg->header, (u8 *)msg->payload,
-				   get_data_len(msg->header),
-				   SOP_MSG);
+				   get_data_len(msg->header), SOP_MSG);
 		signal = false;
 		break;
 	case TCPC_TX_SOP_PRIME:
 		ret = pd_phy_write(msg->header, (u8 *)msg->payload,
-				   get_data_len(msg->header),
-				   SOPI_MSG);
+				   get_data_len(msg->header), SOPI_MSG);
 		signal = false;
 		break;
 	case TCPC_TX_SOP_PRIME_PRIME:
 		ret = pd_phy_write(msg->header, (u8 *)msg->payload,
-				   get_data_len(msg->header),
-				   SOPII_MSG);
+				   get_data_len(msg->header), SOPII_MSG);
 		signal = false;
 		break;
 	default:
@@ -1529,13 +1495,14 @@ static void pd_transmit_handler(struct work_struct *work)
 	if (signal)
 		logbuffer_log(pd->log,
 			      "pd tx type [%s], pdphy ret [%d], status [%s]",
-			      get_tcpm_transmit_type_name(type),
-			      ret, get_tcpm_transmit_status_name(status));
+			      get_tcpm_transmit_type_name(type), ret,
+			      get_tcpm_transmit_status_name(status));
 	else
-		logbuffer_log(pd->log,
-			      "pd tx header [%#x], type [%s], pdphy ret [%d], status [%s]",
-			      msg->header, get_tcpm_transmit_type_name(type),
-			      ret, get_tcpm_transmit_status_name(status));
+		logbuffer_log(
+			pd->log,
+			"pd tx header [%#x], type [%s], pdphy ret [%d], status [%s]",
+			msg->header, get_tcpm_transmit_type_name(type), ret,
+			get_tcpm_transmit_status_name(status));
 
 	kfree(pd_tx_work);
 }
@@ -1597,24 +1564,27 @@ static int tcpm_start_toggling(struct tcpc_dev *dev,
 
 	mutex_lock(&pd->lock);
 
-	ret = vote(pd->disable_power_role_switch, TCPM_DISABLE_CC_VOTER,
-		   false, 0);
+	ret = vote(pd->disable_power_role_switch, TCPM_DISABLE_CC_VOTER, false,
+		   0);
 	if (ret < 0) {
-		logbuffer_log(pd->log,
-			      "unable to unvote DISABLE_POWER_ROLE_SWITCH, ret=%d",
-			      ret);
+		logbuffer_log(
+			pd->log,
+			"unable to unvote DISABLE_POWER_ROLE_SWITCH, ret=%d",
+			ret);
 		goto unlock;
 	}
 
 	ret = rerun_election(pd->disable_power_role_switch);
 	if (ret < 0)
-		logbuffer_log(pd->log,
-			      "error rerunning election of DISABLE_POWER_ROLE_SWITCH, ret=%d",
-			      ret);
+		logbuffer_log(
+			pd->log,
+			"error rerunning election of DISABLE_POWER_ROLE_SWITCH, ret=%d",
+			ret);
 
 	logbuffer_log(pd->log, "start toggling, cc is %s",
 		      get_effective_result(pd->disable_power_role_switch) ?
-		      "disabled" : "toggling");
+			      "disabled" :
+			      "toggling");
 
 	/* Force a recheck of the CC status since cc lines are
 	 * assumed to be open.
@@ -1628,7 +1598,7 @@ unlock:
 
 static int tcpm_set_in_pr_swap(struct tcpc_dev *dev, bool pr_swap)
 {
-	union power_supply_propval val = {0};
+	union power_supply_propval val = { 0 };
 	struct usbpd *pd = container_of(dev, struct usbpd, tcpc_dev);
 	int ret = 0;
 
@@ -1636,12 +1606,13 @@ static int tcpm_set_in_pr_swap(struct tcpc_dev *dev, bool pr_swap)
 	if (pd->in_pr_swap != pr_swap) {
 		if (!pr_swap) {
 			val.intval = POWER_SUPPLY_TYPEC_PR_DUAL;
-			ret = power_supply_set_property(pd->usb_psy,
-					POWER_SUPPLY_PROP_TYPEC_POWER_ROLE,
-					&val);
+			ret = power_supply_set_property(
+				pd->usb_psy, POWER_SUPPLY_PROP_TYPEC_POWER_ROLE,
+				&val);
 			if (ret < 0) {
-				logbuffer_log(pd->log,
-				"unable to set POWER_ROLE to PR_DUAL, ret=%d",
+				logbuffer_log(
+					pd->log,
+					"unable to set POWER_ROLE to PR_DUAL, ret=%d",
 					ret);
 				goto unlock;
 			}
@@ -1652,13 +1623,12 @@ static int tcpm_set_in_pr_swap(struct tcpc_dev *dev, bool pr_swap)
 				    pd->usb_psy);
 		}
 		val.intval = pr_swap ? 1 : 0;
-		ret = power_supply_set_property(pd->usb_psy,
-					POWER_SUPPLY_PROP_PR_SWAP,
-					&val);
+		ret = power_supply_set_property(
+			pd->usb_psy, POWER_SUPPLY_PROP_PR_SWAP, &val);
 		if (ret < 0) {
 			logbuffer_log(pd->log,
-					"unable to set PR_SWAP to %d, ret=%d",
-					pr_swap ? 1 : 0, ret);
+				      "unable to set PR_SWAP to %d, ret=%d",
+				      pr_swap ? 1 : 0, ret);
 			goto unlock;
 		}
 
@@ -1673,7 +1643,7 @@ unlock:
 static int tcpm_set_suspend_supported(struct tcpc_dev *dev,
 				      bool suspend_supported)
 {
-	union power_supply_propval val = {0};
+	union power_supply_propval val = { 0 };
 	struct usbpd *pd = container_of(dev, struct usbpd, tcpc_dev);
 	int ret = 0;
 
@@ -1686,9 +1656,8 @@ static int tcpm_set_suspend_supported(struct tcpc_dev *dev,
 	pd->suspend_supported = suspend_supported;
 	val.intval = suspend_supported ? 1 : 0;
 	logbuffer_log(pd->log, "usb suspend %d", suspend_supported ? 1 : 0);
-	ret = power_supply_set_property(pd->usb_psy,
-				POWER_SUPPLY_PROP_PD_USB_SUSPEND_SUPPORTED,
-				&val);
+	ret = power_supply_set_property(
+		pd->usb_psy, POWER_SUPPLY_PROP_PD_USB_SUSPEND_SUPPORTED, &val);
 	if (ret < 0) {
 		logbuffer_log(pd->log,
 			      "unable to set suspend flag to %d, ret=%d",
@@ -1712,7 +1681,7 @@ enum power_role get_pdphy_power_role(enum typec_role role)
 	}
 }
 
-static const char * const get_typec_role_name(enum typec_role role)
+static const char *const get_typec_role_name(enum typec_role role)
 {
 	switch (role) {
 	case TYPEC_SINK:
@@ -1724,7 +1693,7 @@ static const char * const get_typec_role_name(enum typec_role role)
 	}
 }
 
-static const char * const get_pdphy_pr_name(enum power_role pdphy_pr)
+static const char *const get_pdphy_pr_name(enum power_role pdphy_pr)
 {
 	switch (pdphy_pr) {
 	case PR_SINK:
@@ -1750,7 +1719,7 @@ enum data_role get_pdphy_data_role(enum typec_data_role data)
 	}
 }
 
-static const char * const get_typec_data_role_name(enum typec_data_role data)
+static const char *const get_typec_data_role_name(enum typec_data_role data)
 {
 	switch (data) {
 	case TYPEC_DEVICE:
@@ -1762,7 +1731,7 @@ static const char * const get_typec_data_role_name(enum typec_data_role data)
 	}
 }
 
-static const char * const get_pdphy_dr_name(enum data_role pdphy_dr)
+static const char *const get_pdphy_dr_name(enum data_role pdphy_dr)
 {
 	switch (pdphy_dr) {
 	case DR_UFP:
@@ -1790,22 +1759,19 @@ static int set_pd_header(struct usbpd *pd, enum typec_role role,
 		logbuffer_log(pd->log,
 			      "unable to set pd_phy_header: %s, %s, ret=%d",
 			      get_pdphy_pr_name(pdphy_pr),
-			      get_pdphy_dr_name(pdphy_dr),
-			      ret);
+			      get_pdphy_dr_name(pdphy_dr), ret);
 		return ret;
 	}
 
 	logbuffer_log(pd->log, "set pd_phy_header: %s, %s",
-		      get_pdphy_pr_name(pdphy_pr),
-		      get_pdphy_dr_name(pdphy_dr));
+		      get_pdphy_pr_name(pdphy_pr), get_pdphy_dr_name(pdphy_dr));
 
 	return 0;
 }
 
-#define EXTCON_USB_SUPER_SPEED	true
+#define EXTCON_USB_SUPER_SPEED true
 static int set_usb_data_role(struct usbpd *pd, bool attached,
-			     enum typec_role role,
-			     enum typec_data_role data,
+			     enum typec_role role, enum typec_data_role data,
 			     bool usb_comm_capable)
 {
 	int ret = 0;
@@ -1825,13 +1791,12 @@ static int set_usb_data_role(struct usbpd *pd, bool attached,
 
 	pd->usb_comm_capable = usb_comm_capable;
 
-	logbuffer_log(pd->log,
-		      "set usb_data_role: power [%s], data [%s], apsd_done [%s], attached [%s], comm [%s]",
-		      get_typec_role_name(role),
-		      get_typec_data_role_name(data),
-		      pd->apsd_done ? "Y" : "N",
-		      attached ? "Y" : "N",
-		      usb_comm_capable ? "Y" : "N");
+	logbuffer_log(
+		pd->log,
+		"set usb_data_role: power [%s], data [%s], apsd_done [%s], attached [%s], comm [%s]",
+		get_typec_role_name(role), get_typec_data_role_name(data),
+		pd->apsd_done ? "Y" : "N", attached ? "Y" : "N",
+		usb_comm_capable ? "Y" : "N");
 
 	if (attached && role == TYPEC_SINK &&
 	    !(pd->apsd_done || usb_comm_capable || always_enable_data)) {
@@ -1883,14 +1848,13 @@ static void pd_phy_signal_rx(struct usbpd *pd, enum pd_sig_type type)
 		logbuffer_log(pd->log, "received pd hard reset");
 		break;
 	default:
-		logbuffer_log(pd->log, "received unsupported signal: %d",
-			      type);
+		logbuffer_log(pd->log, "received unsupported signal: %d", type);
 		return;
 	}
 }
 
-static void pd_phy_message_rx(struct usbpd *pd, enum pd_sop_type sop,
-			      u8 *buf, size_t len)
+static void pd_phy_message_rx(struct usbpd *pd, enum pd_sop_type sop, u8 *buf,
+			      size_t len)
 {
 	struct pd_message msg;
 
@@ -1914,12 +1878,12 @@ static void pd_phy_message_rx(struct usbpd *pd, enum pd_sop_type sop,
 	}
 	memcpy(msg.payload, buf, len);
 	logbuffer_log(pd->log, "pd rx header [%#x]", msg.header);
-	tcpm_pd_receive(pd->tcpm_port, &msg, (enum usb_pd_sop_type) sop);
+	tcpm_pd_receive(pd->tcpm_port, &msg, (enum usb_pd_sop_type)sop);
 }
 
 static void set_in_hard_reset_locked(struct tcpc_dev *dev, bool status)
 {
-	union power_supply_propval val = {0};
+	union power_supply_propval val = { 0 };
 	struct usbpd *pd = container_of(dev, struct usbpd, tcpc_dev);
 	int ret = 0;
 
@@ -1927,9 +1891,8 @@ static void set_in_hard_reset_locked(struct tcpc_dev *dev, bool status)
 		return;
 
 	val.intval = status ? 1 : 0;
-	ret = power_supply_set_property(pd->usb_psy,
-					POWER_SUPPLY_PROP_PD_IN_HARD_RESET,
-					&val);
+	ret = power_supply_set_property(
+		pd->usb_psy, POWER_SUPPLY_PROP_PD_IN_HARD_RESET, &val);
 	if (ret < 0) {
 		logbuffer_log(pd->log,
 			      "unable to set hard reset status to %s, ret=%d",
@@ -1996,19 +1959,18 @@ static void log_rtc(struct tcpc_dev *dev)
 
 static void set_pd_capable(struct tcpc_dev *dev, bool capable)
 {
-	union power_supply_propval val = {0};
+	union power_supply_propval val = { 0 };
 	struct usbpd *pd = container_of(dev, struct usbpd, tcpc_dev);
 	int ret = 0;
 
 	if (pd->pd_capable == capable && !pd->in_pr_swap)
 		return;
 
-	val.intval = capable ? POWER_SUPPLY_PD_ACTIVE :
-				POWER_SUPPLY_PD_INACTIVE;
+	val.intval =
+		capable ? POWER_SUPPLY_PD_ACTIVE : POWER_SUPPLY_PD_INACTIVE;
 	pd->pd_capable = capable;
 	ret = power_supply_set_property(pd->usb_psy,
-					POWER_SUPPLY_PROP_PD_ACTIVE,
-					&val);
+					POWER_SUPPLY_PROP_PD_ACTIVE, &val);
 	if (ret < 0) {
 		logbuffer_log(pd->log, "unable to set pd capable to %s, ret=%d",
 			      capable ? "true" : "false", ret);
@@ -2037,14 +1999,12 @@ static const struct tcpc_config pd_tcpc_config_charger = {
 	.type = TYPEC_PORT_SNK,
 };
 
-static int init_tcpc_dev(struct usbpd *pd,
-			 struct device *parent)
+static int init_tcpc_dev(struct usbpd *pd, struct device *parent)
 {
 	struct tcpc_dev *pd_tcpc_dev = &pd->tcpc_dev;
 	int ret = 0;
 
-	pd_tcpc_dev->fwnode = device_get_named_child_node(parent,
-							  "connector");
+	pd_tcpc_dev->fwnode = device_get_named_child_node(parent, "connector");
 	if (!pd_tcpc_dev->fwnode) {
 		dev_err(&pd->dev, "Can't find connector node.\n");
 		return -EINVAL;
@@ -2099,8 +2059,8 @@ static void init_pd_phy_params(struct pd_phy_params *pdphy_params)
 	pdphy_params->shutdown_cb = pd_phy_shutdown;
 	pdphy_params->data_role = DR_UFP;
 	pdphy_params->power_role = PR_SINK;
-	pdphy_params->frame_filter_val = FRAME_FILTER_EN_SOP |
-					 FRAME_FILTER_EN_HARD_RESET;
+	pdphy_params->frame_filter_val =
+		FRAME_FILTER_EN_SOP | FRAME_FILTER_EN_HARD_RESET;
 }
 
 static int update_ext_vbus(struct notifier_block *self, unsigned long action,
@@ -2130,18 +2090,18 @@ static int update_ext_vbus(struct notifier_block *self, unsigned long action,
 			goto exit;
 		}
 		pd->external_vbus_update = turn_on_ext_vbus;
-		work_queued = queue_delayed_work(pd->wq, &pd->ext_vbus_work,
-					turn_on_ext_vbus ?
-					msecs_to_jiffies(EXT_VBUS_WORK_DELAY_MS)
-					: 0);
+		work_queued = queue_delayed_work(
+			pd->wq, &pd->ext_vbus_work,
+			turn_on_ext_vbus ?
+				msecs_to_jiffies(EXT_VBUS_WORK_DELAY_MS) :
+				0);
 		if (!work_queued)
 			logbuffer_log(pd->log,
 				      "error: queueing ext_vbus_work failed");
 		else {
 			pm_stay_awake(&pd->dev);
 			logbuffer_log(pd->log, "queued work EXT_VBUS_%s",
-				      (action == EXT_VBUS_ON) ?
-					"ON" : "OFF");
+				      (action == EXT_VBUS_ON) ? "ON" : "OFF");
 		}
 	}
 
@@ -2172,13 +2132,13 @@ static bool search_param(char *cmdline, const char *search_str)
 	return found_str ? true : false;
 }
 
-static void parse_cmdline()
+static void parse_cmdline(void)
 {
 	char *cmdline;
-	const char *chargingtest = CMDLINE_PARAM(CMDLINE_BOOT_MODE_KEY,
-						 CHARGINGTEST_BOOT_MODE);
-	const char *charger = CMDLINE_PARAM(CMDLINE_BOOT_MODE_KEY,
-					    CHARGER_BOOT_MODE);
+	const char *chargingtest =
+		CMDLINE_PARAM(CMDLINE_BOOT_MODE_KEY, CHARGINGTEST_BOOT_MODE);
+	const char *charger =
+		CMDLINE_PARAM(CMDLINE_BOOT_MODE_KEY, CHARGER_BOOT_MODE);
 	const char *suzyq = CMDLINE_PARAM(CMDLINE_SUZYQ_KEY, SUZYQ_ENABLED);
 
 	cmdline = kstrdup(saved_command_line, GFP_KERNEL);
@@ -2218,17 +2178,16 @@ static void usbpd_release(struct device *dev)
 static int num_pd_instances;
 
 static ssize_t pdo_show(struct device *dev, struct device_attribute *attr,
-		char *buf)
+			char *buf)
 {
 	struct usbpd *pd = container_of(dev, struct usbpd, dev);
 	struct tcpc_dev *pd_tcpc_dev = &pd->tcpc_dev;
 
-	return scnprintf(buf, PAGE_SIZE, "%d\n",
-			pd_tcpc_dev->fixed_5V3A);
+	return scnprintf(buf, PAGE_SIZE, "%d\n", pd_tcpc_dev->fixed_5V3A);
 }
 
 static ssize_t pdo_store(struct device *dev, struct device_attribute *attr,
-		const char *buf, size_t count)
+			 const char *buf, size_t count)
 {
 	struct usbpd *pd = container_of(dev, struct usbpd, dev);
 	struct tcpc_dev *pd_tcpc_dev = &pd->tcpc_dev;
@@ -2260,8 +2219,7 @@ static ssize_t usb_limit_sink_enable_show(struct device *dev,
  */
 static ssize_t usb_limit_sink_enable_store(struct device *dev,
 					   struct device_attribute *attr,
-					   const char *buf,
-					   size_t count)
+					   const char *buf, size_t count)
 {
 	struct usbpd *pd = container_of(dev, struct usbpd, dev);
 	bool enable;
@@ -2277,14 +2235,15 @@ static ssize_t usb_limit_sink_enable_store(struct device *dev,
 		ret = vote(pd->usb_icl_votable, "LIMIT_USB_VOTER", true,
 			   pd->limit_sink_current);
 		if (ret < 0) {
-			dev_err(&pd->dev, "Cannot set limit sink current, ret %d\n",
-				ret);
+			dev_err(&pd->dev,
+				"Cannot set limit sink current, ret %d\n", ret);
 			goto exit;
 		}
 	} else {
 		ret = vote(pd->usb_icl_votable, "LIMIT_USB_VOTER", false, 0);
 		if (ret < 0) {
-			dev_err(&pd->dev, "Cannot unvote for sink current, ret %d\n",
+			dev_err(&pd->dev,
+				"Cannot unvote for sink current, ret %d\n",
 				ret);
 			goto exit;
 		}
@@ -2361,10 +2320,8 @@ static ssize_t usb_limit_source_enable_store(struct device *dev,
 static DEVICE_ATTR_RW(usb_limit_source_enable);
 
 static struct device_attribute *usbpd_device_attrs[] = {
-	&dev_attr_pdo,
-	&dev_attr_usb_limit_sink_enable,
-	&dev_attr_usb_limit_sink_current,
-	&dev_attr_usb_limit_source_enable,
+	&dev_attr_pdo, &dev_attr_usb_limit_sink_enable,
+	&dev_attr_usb_limit_sink_current, &dev_attr_usb_limit_source_enable,
 	NULL
 };
 
@@ -2384,7 +2341,7 @@ struct usbpd *usbpd_create(struct device *parent)
 {
 	int ret = 0, i;
 	struct usbpd *pd;
-	union power_supply_propval val = {0};
+	union power_supply_propval val = { 0 };
 
 	pd = kzalloc(sizeof(*pd), GFP_KERNEL);
 	if (!pd)
@@ -2409,8 +2366,8 @@ struct usbpd *usbpd_create(struct device *parent)
 	if (ret < 0)
 		goto free_buffer;
 
-	pd->wlc_supported = device_property_read_bool(parent,
-						      "goog,wlc-supported");
+	pd->wlc_supported =
+		device_property_read_bool(parent, "goog,wlc-supported");
 
 #ifdef CONFIG_DEBUG_FS
 	ret = pd_engine_debugfs_init(pd);
@@ -2436,9 +2393,8 @@ struct usbpd *usbpd_create(struct device *parent)
 		goto exit_debugfs;
 	}
 
-
-	pd->ext_vbus_supported = device_property_read_bool(parent,
-				 "google,ext_vbus-supported");
+	pd->ext_vbus_supported =
+		device_property_read_bool(parent, "google,ext_vbus-supported");
 
 	if (pd->ext_vbus_supported) {
 		pd->ext_vbus = devm_regulator_get(parent, "ext-vbus");
@@ -2451,16 +2407,17 @@ struct usbpd *usbpd_create(struct device *parent)
 		pd->hw_reg_nb.notifier_call = ext_boost_changed;
 		ret = regulator_register_notifier(pd->ext_vbus, &pd->hw_reg_nb);
 		if (ret) {
-			dev_err(&pd->dev, "Couldn't register ext_boost notifier\n");
+			dev_err(&pd->dev,
+				"Couldn't register ext_boost notifier\n");
 			goto exit_debugfs;
 		}
 	}
 
-	pd->switch_based_on_maxpower = device_property_read_bool(parent,
-				       "google,maxpower-switch");
+	pd->switch_based_on_maxpower =
+		device_property_read_bool(parent, "google,maxpower-switch");
 
-	pd->fixed_pdo_5V3A = device_property_read_bool(parent,
-			     "google,fixed_pdo_5V3A");
+	pd->fixed_pdo_5V3A =
+		device_property_read_bool(parent, "google,fixed_pdo_5V3A");
 
 	pd->extcon = devm_extcon_dev_allocate(parent, usbpd_extcon_cable);
 	if (IS_ERR(pd->extcon)) {
@@ -2512,8 +2469,9 @@ struct usbpd *usbpd_create(struct device *parent)
 	if (pd->wlc_supported) {
 		pd->wireless_psy = power_supply_get_by_name("wireless");
 		if (!pd->wireless_psy) {
-			logbuffer_log(pd->log,
-				      "Could not get wireless power_supply, deferring probe");
+			logbuffer_log(
+				pd->log,
+				"Could not get wireless power_supply, deferring probe");
 			ret = -EPROBE_DEFER;
 			goto put_psy_usb;
 		}
@@ -2529,15 +2487,15 @@ struct usbpd *usbpd_create(struct device *parent)
 
 	pd->apsd_disable_votable = find_votable("APSD_DISABLE");
 	if (pd->apsd_disable_votable == NULL) {
-		logbuffer_log(pd->log,
-			      "Couldn't find APSD_DISABLE votable, deferring probe"
-			      );
+		logbuffer_log(
+			pd->log,
+			"Couldn't find APSD_DISABLE votable, deferring probe");
 		ret = -EPROBE_DEFER;
 		goto put_psy_wireless;
 	}
 
 	pd->disable_power_role_switch =
-				find_votable("DISABLE_POWER_ROLE_SWITCH");
+		find_votable("DISABLE_POWER_ROLE_SWITCH");
 	if (pd->disable_power_role_switch == NULL) {
 		dev_err(&pd->dev,
 			"Couldn't find DISABLE_POWER_ROLE_SWITCH votable, deferring probe");
@@ -2546,11 +2504,11 @@ struct usbpd *usbpd_create(struct device *parent)
 	}
 
 	pd->src_cap_votable = create_votable("SWITCH_SRC_CAP", VOTE_MIN,
-					     pd_switch_src_cap_callback,
-					     pd);
+					     pd_switch_src_cap_callback, pd);
 	if (IS_ERR(pd->src_cap_votable)) {
 		ret = PTR_ERR(pd->src_cap_votable);
-		dev_err(&pd->dev, "Couldn't create SWITCH_SRC_CAP votable (%d), deferring probe",
+		dev_err(&pd->dev,
+			"Couldn't create SWITCH_SRC_CAP votable (%d), deferring probe",
 			ret);
 		ret = -EPROBE_DEFER;
 		goto put_psy_wireless;
@@ -2594,8 +2552,7 @@ struct usbpd *usbpd_create(struct device *parent)
 
 	val.intval = POWER_SUPPLY_PD_INACTIVE;
 	ret = power_supply_set_property(pd->usb_psy,
-				  POWER_SUPPLY_PROP_PD_ACTIVE,
-				  &val);
+					POWER_SUPPLY_PROP_PD_ACTIVE, &val);
 	if (ret < 0)
 		dev_err(&pd->dev, "Cannot set POWER_SUPPLY_PROP_PD_ACTIVE\n");
 
@@ -2607,8 +2564,8 @@ struct usbpd *usbpd_create(struct device *parent)
 		ret = device_create_file(&pd->dev, usbpd_device_attrs[i]);
 		if (ret < 0)
 			dev_err(&pd->dev,
-				"Unable to create device attr[%d] ret:%d:",
-				i, ret);
+				"Unable to create device attr[%d] ret:%d:", i,
+				ret);
 	}
 
 	return pd;
