@@ -36,45 +36,45 @@
 
 /* to trigger crc/non-crc ndp signature */
 
-#define NCM_NDP_HDR_CRC		0x01000000
+#define NCM_NDP_HDR_CRC 0x01000000
 
 enum ncm_notify_state {
-	NCM_NOTIFY_NONE,		/* don't notify */
-	NCM_NOTIFY_CONNECT,		/* issue CONNECT next */
-	NCM_NOTIFY_SPEED,		/* issue SPEED_CHANGE next */
+	NCM_NOTIFY_NONE, /* don't notify */
+	NCM_NOTIFY_CONNECT, /* issue CONNECT next */
+	NCM_NOTIFY_SPEED, /* issue SPEED_CHANGE next */
 };
 
 struct f_ncm {
-	struct gether			port;
-	u8				ctrl_id, data_id;
+	struct gether port;
+	u8 ctrl_id, data_id;
 
-	char				ethaddr[14];
+	char ethaddr[14];
 
-	struct usb_ep			*notify;
-	struct usb_request		*notify_req;
-	u8				notify_state;
-	atomic_t			notify_count;
-	bool				is_open;
+	struct usb_ep *notify;
+	struct usb_request *notify_req;
+	u8 notify_state;
+	atomic_t notify_count;
+	bool is_open;
 
-	const struct ndp_parser_opts	*parser_opts;
-	bool				is_crc;
-	u32				ndp_sign;
+	const struct ndp_parser_opts *parser_opts;
+	bool is_crc;
+	u32 ndp_sign;
 
 	/*
 	 * for notification, it is accessed from both
 	 * callback and ethernet open/close
 	 */
-	spinlock_t			lock;
+	spinlock_t lock;
 
-	struct net_device		*netdev;
+	struct net_device *netdev;
 
 	/* For multi-frame NDP TX */
-	struct sk_buff			*skb_tx_data;
-	struct sk_buff			*skb_tx_ndp;
-	u16				ndp_dgram_count;
-	bool				timer_force_tx;
-	struct hrtimer			task_timer;
-	bool				timer_stopping;
+	struct sk_buff *skb_tx_data;
+	struct sk_buff *skb_tx_ndp;
+	u16 ndp_dgram_count;
+	bool timer_force_tx;
+	struct hrtimer task_timer;
+	bool timer_stopping;
 };
 
 static inline struct f_ncm *func_to_ncm(struct usb_function *f)
@@ -94,7 +94,7 @@ static inline unsigned ncm_bitrate(struct usb_gadget *g)
 	else if (gadget_is_dualspeed(g) && g->speed == USB_SPEED_HIGH)
 		return 13 * 512 * 8 * 1000 * 8;
 	else
-		return 19 *  64 * 1 * 1000 * 8;
+		return 19 * 64 * 1 * 1000 * 8;
 }
 
 /*-------------------------------------------------------------------------*/
@@ -105,8 +105,8 @@ static inline unsigned ncm_bitrate(struct usb_gadget *g)
  * If the host can group frames, allow it to do that, 16K is selected,
  * because it's used by default by the current linux host driver
  */
-#define NTB_DEFAULT_IN_SIZE	16384
-#define NTB_OUT_SIZE		16384
+#define NTB_DEFAULT_IN_SIZE 16384
+#define NTB_OUT_SIZE 16384
 
 /* Allocation for storing the NDP, 32 should suffice for a
  * 16k packet. This allows a maximum of 32 * 507 Byte packets to
@@ -115,13 +115,13 @@ static inline unsigned ncm_bitrate(struct usb_gadget *g)
  * Smaller packets are not likely to be trying to maximize the
  * throughput and will be mstly sending smaller infrequent frames.
  */
-#define TX_MAX_NUM_DPE		32
+#define TX_MAX_NUM_DPE 32
 
 /* Delay for the transmit to wait before sending an unfilled NTB frame. */
-#define TX_TIMEOUT_NSECS	300000
+#define TX_TIMEOUT_NSECS 300000
 
-#define FORMATS_SUPPORTED	(USB_CDC_NCM_NTB16_SUPPORTED |	\
-				 USB_CDC_NCM_NTB32_SUPPORTED)
+#define FORMATS_SUPPORTED                                                      \
+	(USB_CDC_NCM_NTB16_SUPPORTED | USB_CDC_NCM_NTB32_SUPPORTED)
 
 static struct usb_cdc_ncm_ntb_parameters ntb_parameters = {
 	.wLength = cpu_to_le16(sizeof(ntb_parameters)),
@@ -143,72 +143,72 @@ static struct usb_cdc_ncm_ntb_parameters ntb_parameters = {
  * waste less bandwidth.
  */
 
-#define NCM_STATUS_INTERVAL_MS		32
-#define NCM_STATUS_BYTECOUNT		16	/* 8 byte header + data */
+#define NCM_STATUS_INTERVAL_MS 32
+#define NCM_STATUS_BYTECOUNT 16 /* 8 byte header + data */
 
 static struct usb_interface_assoc_descriptor ncm_iad_desc = {
-	.bLength =		sizeof ncm_iad_desc,
-	.bDescriptorType =	USB_DT_INTERFACE_ASSOCIATION,
+	.bLength = sizeof ncm_iad_desc,
+	.bDescriptorType = USB_DT_INTERFACE_ASSOCIATION,
 
 	/* .bFirstInterface =	DYNAMIC, */
-	.bInterfaceCount =	2,	/* control + data */
-	.bFunctionClass =	USB_CLASS_COMM,
-	.bFunctionSubClass =	USB_CDC_SUBCLASS_NCM,
-	.bFunctionProtocol =	USB_CDC_PROTO_NONE,
+	.bInterfaceCount = 2, /* control + data */
+	.bFunctionClass = USB_CLASS_COMM,
+	.bFunctionSubClass = USB_CDC_SUBCLASS_NCM,
+	.bFunctionProtocol = USB_CDC_PROTO_NONE,
 	/* .iFunction =		DYNAMIC */
 };
 
 /* interface descriptor: */
 
 static struct usb_interface_descriptor ncm_control_intf = {
-	.bLength =		sizeof ncm_control_intf,
-	.bDescriptorType =	USB_DT_INTERFACE,
+	.bLength = sizeof ncm_control_intf,
+	.bDescriptorType = USB_DT_INTERFACE,
 
 	/* .bInterfaceNumber = DYNAMIC */
-	.bNumEndpoints =	1,
-	.bInterfaceClass =	USB_CLASS_COMM,
-	.bInterfaceSubClass =	USB_CDC_SUBCLASS_NCM,
-	.bInterfaceProtocol =	USB_CDC_PROTO_NONE,
+	.bNumEndpoints = 1,
+	.bInterfaceClass = USB_CLASS_COMM,
+	.bInterfaceSubClass = USB_CDC_SUBCLASS_NCM,
+	.bInterfaceProtocol = USB_CDC_PROTO_NONE,
 	/* .iInterface = DYNAMIC */
 };
 
 static struct usb_cdc_header_desc ncm_header_desc = {
-	.bLength =		sizeof ncm_header_desc,
-	.bDescriptorType =	USB_DT_CS_INTERFACE,
-	.bDescriptorSubType =	USB_CDC_HEADER_TYPE,
+	.bLength = sizeof ncm_header_desc,
+	.bDescriptorType = USB_DT_CS_INTERFACE,
+	.bDescriptorSubType = USB_CDC_HEADER_TYPE,
 
-	.bcdCDC =		cpu_to_le16(0x0110),
+	.bcdCDC = cpu_to_le16(0x0110),
 };
 
 static struct usb_cdc_union_desc ncm_union_desc = {
-	.bLength =		sizeof(ncm_union_desc),
-	.bDescriptorType =	USB_DT_CS_INTERFACE,
-	.bDescriptorSubType =	USB_CDC_UNION_TYPE,
+	.bLength = sizeof(ncm_union_desc),
+	.bDescriptorType = USB_DT_CS_INTERFACE,
+	.bDescriptorSubType = USB_CDC_UNION_TYPE,
 	/* .bMasterInterface0 =	DYNAMIC */
 	/* .bSlaveInterface0 =	DYNAMIC */
 };
 
 static struct usb_cdc_ether_desc ecm_desc = {
-	.bLength =		sizeof ecm_desc,
-	.bDescriptorType =	USB_DT_CS_INTERFACE,
-	.bDescriptorSubType =	USB_CDC_ETHERNET_TYPE,
+	.bLength = sizeof ecm_desc,
+	.bDescriptorType = USB_DT_CS_INTERFACE,
+	.bDescriptorSubType = USB_CDC_ETHERNET_TYPE,
 
 	/* this descriptor actually adds value, surprise! */
 	/* .iMACAddress = DYNAMIC */
-	.bmEthernetStatistics =	cpu_to_le32(0), /* no statistics */
-	.wMaxSegmentSize =	cpu_to_le16(ETH_FRAME_LEN),
-	.wNumberMCFilters =	cpu_to_le16(0),
-	.bNumberPowerFilters =	0,
+	.bmEthernetStatistics = cpu_to_le32(0), /* no statistics */
+	.wMaxSegmentSize = cpu_to_le16(ETH_FRAME_LEN),
+	.wNumberMCFilters = cpu_to_le16(0),
+	.bNumberPowerFilters = 0,
 };
 
-#define NCAPS	(USB_CDC_NCM_NCAP_ETH_FILTER | USB_CDC_NCM_NCAP_CRC_MODE)
+#define NCAPS (USB_CDC_NCM_NCAP_ETH_FILTER | USB_CDC_NCM_NCAP_CRC_MODE)
 
 static struct usb_cdc_ncm_desc ncm_desc = {
-	.bLength =		sizeof ncm_desc,
-	.bDescriptorType =	USB_DT_CS_INTERFACE,
-	.bDescriptorSubType =	USB_CDC_NCM_TYPE,
+	.bLength = sizeof ncm_desc,
+	.bDescriptorType = USB_DT_CS_INTERFACE,
+	.bDescriptorSubType = USB_CDC_NCM_TYPE,
 
-	.bcdNcmVersion =	cpu_to_le16(0x0100),
+	.bcdNcmVersion = cpu_to_le16(0x0100),
 	/* can process SetEthernetPacketFilter */
 	.bmNetworkCapabilities = NCAPS,
 };
@@ -216,168 +216,167 @@ static struct usb_cdc_ncm_desc ncm_desc = {
 /* the default data interface has no endpoints ... */
 
 static struct usb_interface_descriptor ncm_data_nop_intf = {
-	.bLength =		sizeof ncm_data_nop_intf,
-	.bDescriptorType =	USB_DT_INTERFACE,
+	.bLength = sizeof ncm_data_nop_intf,
+	.bDescriptorType = USB_DT_INTERFACE,
 
-	.bInterfaceNumber =	1,
-	.bAlternateSetting =	0,
-	.bNumEndpoints =	0,
-	.bInterfaceClass =	USB_CLASS_CDC_DATA,
-	.bInterfaceSubClass =	0,
-	.bInterfaceProtocol =	USB_CDC_NCM_PROTO_NTB,
+	.bInterfaceNumber = 1,
+	.bAlternateSetting = 0,
+	.bNumEndpoints = 0,
+	.bInterfaceClass = USB_CLASS_CDC_DATA,
+	.bInterfaceSubClass = 0,
+	.bInterfaceProtocol = USB_CDC_NCM_PROTO_NTB,
 	/* .iInterface = DYNAMIC */
 };
 
 /* ... but the "real" data interface has two bulk endpoints */
 
 static struct usb_interface_descriptor ncm_data_intf = {
-	.bLength =		sizeof ncm_data_intf,
-	.bDescriptorType =	USB_DT_INTERFACE,
+	.bLength = sizeof ncm_data_intf,
+	.bDescriptorType = USB_DT_INTERFACE,
 
-	.bInterfaceNumber =	1,
-	.bAlternateSetting =	1,
-	.bNumEndpoints =	2,
-	.bInterfaceClass =	USB_CLASS_CDC_DATA,
-	.bInterfaceSubClass =	0,
-	.bInterfaceProtocol =	USB_CDC_NCM_PROTO_NTB,
+	.bInterfaceNumber = 1,
+	.bAlternateSetting = 1,
+	.bNumEndpoints = 2,
+	.bInterfaceClass = USB_CLASS_CDC_DATA,
+	.bInterfaceSubClass = 0,
+	.bInterfaceProtocol = USB_CDC_NCM_PROTO_NTB,
 	/* .iInterface = DYNAMIC */
 };
 
 /* full speed support: */
 
 static struct usb_endpoint_descriptor fs_ncm_notify_desc = {
-	.bLength =		USB_DT_ENDPOINT_SIZE,
-	.bDescriptorType =	USB_DT_ENDPOINT,
+	.bLength = USB_DT_ENDPOINT_SIZE,
+	.bDescriptorType = USB_DT_ENDPOINT,
 
-	.bEndpointAddress =	USB_DIR_IN,
-	.bmAttributes =		USB_ENDPOINT_XFER_INT,
-	.wMaxPacketSize =	cpu_to_le16(NCM_STATUS_BYTECOUNT),
-	.bInterval =		NCM_STATUS_INTERVAL_MS,
+	.bEndpointAddress = USB_DIR_IN,
+	.bmAttributes = USB_ENDPOINT_XFER_INT,
+	.wMaxPacketSize = cpu_to_le16(NCM_STATUS_BYTECOUNT),
+	.bInterval = NCM_STATUS_INTERVAL_MS,
 };
 
 static struct usb_endpoint_descriptor fs_ncm_in_desc = {
-	.bLength =		USB_DT_ENDPOINT_SIZE,
-	.bDescriptorType =	USB_DT_ENDPOINT,
+	.bLength = USB_DT_ENDPOINT_SIZE,
+	.bDescriptorType = USB_DT_ENDPOINT,
 
-	.bEndpointAddress =	USB_DIR_IN,
-	.bmAttributes =		USB_ENDPOINT_XFER_BULK,
+	.bEndpointAddress = USB_DIR_IN,
+	.bmAttributes = USB_ENDPOINT_XFER_BULK,
 };
 
 static struct usb_endpoint_descriptor fs_ncm_out_desc = {
-	.bLength =		USB_DT_ENDPOINT_SIZE,
-	.bDescriptorType =	USB_DT_ENDPOINT,
+	.bLength = USB_DT_ENDPOINT_SIZE,
+	.bDescriptorType = USB_DT_ENDPOINT,
 
-	.bEndpointAddress =	USB_DIR_OUT,
-	.bmAttributes =		USB_ENDPOINT_XFER_BULK,
+	.bEndpointAddress = USB_DIR_OUT,
+	.bmAttributes = USB_ENDPOINT_XFER_BULK,
 };
 
 static struct usb_descriptor_header *ncm_fs_function[] = {
-	(struct usb_descriptor_header *) &ncm_iad_desc,
+	(struct usb_descriptor_header *)&ncm_iad_desc,
 	/* CDC NCM control descriptors */
-	(struct usb_descriptor_header *) &ncm_control_intf,
-	(struct usb_descriptor_header *) &ncm_header_desc,
-	(struct usb_descriptor_header *) &ncm_union_desc,
-	(struct usb_descriptor_header *) &ecm_desc,
-	(struct usb_descriptor_header *) &ncm_desc,
-	(struct usb_descriptor_header *) &fs_ncm_notify_desc,
+	(struct usb_descriptor_header *)&ncm_control_intf,
+	(struct usb_descriptor_header *)&ncm_header_desc,
+	(struct usb_descriptor_header *)&ncm_union_desc,
+	(struct usb_descriptor_header *)&ecm_desc,
+	(struct usb_descriptor_header *)&ncm_desc,
+	(struct usb_descriptor_header *)&fs_ncm_notify_desc,
 	/* data interface, altsettings 0 and 1 */
-	(struct usb_descriptor_header *) &ncm_data_nop_intf,
-	(struct usb_descriptor_header *) &ncm_data_intf,
-	(struct usb_descriptor_header *) &fs_ncm_in_desc,
-	(struct usb_descriptor_header *) &fs_ncm_out_desc,
+	(struct usb_descriptor_header *)&ncm_data_nop_intf,
+	(struct usb_descriptor_header *)&ncm_data_intf,
+	(struct usb_descriptor_header *)&fs_ncm_in_desc,
+	(struct usb_descriptor_header *)&fs_ncm_out_desc,
 	NULL,
 };
 
 /* high speed support: */
 
 static struct usb_endpoint_descriptor hs_ncm_notify_desc = {
-	.bLength =		USB_DT_ENDPOINT_SIZE,
-	.bDescriptorType =	USB_DT_ENDPOINT,
+	.bLength = USB_DT_ENDPOINT_SIZE,
+	.bDescriptorType = USB_DT_ENDPOINT,
 
-	.bEndpointAddress =	USB_DIR_IN,
-	.bmAttributes =		USB_ENDPOINT_XFER_INT,
-	.wMaxPacketSize =	cpu_to_le16(NCM_STATUS_BYTECOUNT),
-	.bInterval =		USB_MS_TO_HS_INTERVAL(NCM_STATUS_INTERVAL_MS),
+	.bEndpointAddress = USB_DIR_IN,
+	.bmAttributes = USB_ENDPOINT_XFER_INT,
+	.wMaxPacketSize = cpu_to_le16(NCM_STATUS_BYTECOUNT),
+	.bInterval = USB_MS_TO_HS_INTERVAL(NCM_STATUS_INTERVAL_MS),
 };
 static struct usb_endpoint_descriptor hs_ncm_in_desc = {
-	.bLength =		USB_DT_ENDPOINT_SIZE,
-	.bDescriptorType =	USB_DT_ENDPOINT,
+	.bLength = USB_DT_ENDPOINT_SIZE,
+	.bDescriptorType = USB_DT_ENDPOINT,
 
-	.bEndpointAddress =	USB_DIR_IN,
-	.bmAttributes =		USB_ENDPOINT_XFER_BULK,
-	.wMaxPacketSize =	cpu_to_le16(512),
+	.bEndpointAddress = USB_DIR_IN,
+	.bmAttributes = USB_ENDPOINT_XFER_BULK,
+	.wMaxPacketSize = cpu_to_le16(512),
 };
 
 static struct usb_endpoint_descriptor hs_ncm_out_desc = {
-	.bLength =		USB_DT_ENDPOINT_SIZE,
-	.bDescriptorType =	USB_DT_ENDPOINT,
+	.bLength = USB_DT_ENDPOINT_SIZE,
+	.bDescriptorType = USB_DT_ENDPOINT,
 
-	.bEndpointAddress =	USB_DIR_OUT,
-	.bmAttributes =		USB_ENDPOINT_XFER_BULK,
-	.wMaxPacketSize =	cpu_to_le16(512),
+	.bEndpointAddress = USB_DIR_OUT,
+	.bmAttributes = USB_ENDPOINT_XFER_BULK,
+	.wMaxPacketSize = cpu_to_le16(512),
 };
 
 static struct usb_descriptor_header *ncm_hs_function[] = {
-	(struct usb_descriptor_header *) &ncm_iad_desc,
+	(struct usb_descriptor_header *)&ncm_iad_desc,
 	/* CDC NCM control descriptors */
-	(struct usb_descriptor_header *) &ncm_control_intf,
-	(struct usb_descriptor_header *) &ncm_header_desc,
-	(struct usb_descriptor_header *) &ncm_union_desc,
-	(struct usb_descriptor_header *) &ecm_desc,
-	(struct usb_descriptor_header *) &ncm_desc,
-	(struct usb_descriptor_header *) &hs_ncm_notify_desc,
+	(struct usb_descriptor_header *)&ncm_control_intf,
+	(struct usb_descriptor_header *)&ncm_header_desc,
+	(struct usb_descriptor_header *)&ncm_union_desc,
+	(struct usb_descriptor_header *)&ecm_desc,
+	(struct usb_descriptor_header *)&ncm_desc,
+	(struct usb_descriptor_header *)&hs_ncm_notify_desc,
 	/* data interface, altsettings 0 and 1 */
-	(struct usb_descriptor_header *) &ncm_data_nop_intf,
-	(struct usb_descriptor_header *) &ncm_data_intf,
-	(struct usb_descriptor_header *) &hs_ncm_in_desc,
-	(struct usb_descriptor_header *) &hs_ncm_out_desc,
+	(struct usb_descriptor_header *)&ncm_data_nop_intf,
+	(struct usb_descriptor_header *)&ncm_data_intf,
+	(struct usb_descriptor_header *)&hs_ncm_in_desc,
+	(struct usb_descriptor_header *)&hs_ncm_out_desc,
 	NULL,
 };
-
 
 /* super speed support: */
 
 static struct usb_endpoint_descriptor ss_ncm_notify_desc = {
-	.bLength =		USB_DT_ENDPOINT_SIZE,
-	.bDescriptorType =	USB_DT_ENDPOINT,
+	.bLength = USB_DT_ENDPOINT_SIZE,
+	.bDescriptorType = USB_DT_ENDPOINT,
 
-	.bEndpointAddress =	USB_DIR_IN,
-	.bmAttributes =		USB_ENDPOINT_XFER_INT,
-	.wMaxPacketSize =	cpu_to_le16(NCM_STATUS_BYTECOUNT),
-	.bInterval =		USB_MS_TO_HS_INTERVAL(NCM_STATUS_INTERVAL_MS)
+	.bEndpointAddress = USB_DIR_IN,
+	.bmAttributes = USB_ENDPOINT_XFER_INT,
+	.wMaxPacketSize = cpu_to_le16(NCM_STATUS_BYTECOUNT),
+	.bInterval = USB_MS_TO_HS_INTERVAL(NCM_STATUS_INTERVAL_MS)
 };
 
 static struct usb_ss_ep_comp_descriptor ss_ncm_notify_comp_desc = {
-	.bLength =		sizeof(ss_ncm_notify_comp_desc),
-	.bDescriptorType =	USB_DT_SS_ENDPOINT_COMP,
+	.bLength = sizeof(ss_ncm_notify_comp_desc),
+	.bDescriptorType = USB_DT_SS_ENDPOINT_COMP,
 
 	/* the following 3 values can be tweaked if necessary */
 	/* .bMaxBurst =		0, */
 	/* .bmAttributes =	0, */
-	.wBytesPerInterval =	cpu_to_le16(NCM_STATUS_BYTECOUNT),
+	.wBytesPerInterval = cpu_to_le16(NCM_STATUS_BYTECOUNT),
 };
 
 static struct usb_endpoint_descriptor ss_ncm_in_desc = {
-	.bLength =		USB_DT_ENDPOINT_SIZE,
-	.bDescriptorType =	USB_DT_ENDPOINT,
+	.bLength = USB_DT_ENDPOINT_SIZE,
+	.bDescriptorType = USB_DT_ENDPOINT,
 
-	.bEndpointAddress =	USB_DIR_IN,
-	.bmAttributes =		USB_ENDPOINT_XFER_BULK,
-	.wMaxPacketSize =	cpu_to_le16(1024),
+	.bEndpointAddress = USB_DIR_IN,
+	.bmAttributes = USB_ENDPOINT_XFER_BULK,
+	.wMaxPacketSize = cpu_to_le16(1024),
 };
 
 static struct usb_endpoint_descriptor ss_ncm_out_desc = {
-	.bLength =		USB_DT_ENDPOINT_SIZE,
-	.bDescriptorType =	USB_DT_ENDPOINT,
+	.bLength = USB_DT_ENDPOINT_SIZE,
+	.bDescriptorType = USB_DT_ENDPOINT,
 
-	.bEndpointAddress =	USB_DIR_OUT,
-	.bmAttributes =		USB_ENDPOINT_XFER_BULK,
-	.wMaxPacketSize =	cpu_to_le16(1024),
+	.bEndpointAddress = USB_DIR_OUT,
+	.bmAttributes = USB_ENDPOINT_XFER_BULK,
+	.wMaxPacketSize = cpu_to_le16(1024),
 };
 
 static struct usb_ss_ep_comp_descriptor ss_ncm_bulk_comp_desc = {
-	.bLength =		sizeof(ss_ncm_bulk_comp_desc),
-	.bDescriptorType =	USB_DT_SS_ENDPOINT_COMP,
+	.bLength = sizeof(ss_ncm_bulk_comp_desc),
+	.bDescriptorType = USB_DT_SS_ENDPOINT_COMP,
 
 	/* the following 2 values can be tweaked if necessary */
 	/* .bMaxBurst =		0, */
@@ -385,43 +384,43 @@ static struct usb_ss_ep_comp_descriptor ss_ncm_bulk_comp_desc = {
 };
 
 static struct usb_descriptor_header *ncm_ss_function[] = {
-	(struct usb_descriptor_header *) &ncm_iad_desc,
+	(struct usb_descriptor_header *)&ncm_iad_desc,
 	/* CDC NCM control descriptors */
-	(struct usb_descriptor_header *) &ncm_control_intf,
-	(struct usb_descriptor_header *) &ncm_header_desc,
-	(struct usb_descriptor_header *) &ncm_union_desc,
-	(struct usb_descriptor_header *) &ecm_desc,
-	(struct usb_descriptor_header *) &ncm_desc,
-	(struct usb_descriptor_header *) &ss_ncm_notify_desc,
-	(struct usb_descriptor_header *) &ss_ncm_notify_comp_desc,
+	(struct usb_descriptor_header *)&ncm_control_intf,
+	(struct usb_descriptor_header *)&ncm_header_desc,
+	(struct usb_descriptor_header *)&ncm_union_desc,
+	(struct usb_descriptor_header *)&ecm_desc,
+	(struct usb_descriptor_header *)&ncm_desc,
+	(struct usb_descriptor_header *)&ss_ncm_notify_desc,
+	(struct usb_descriptor_header *)&ss_ncm_notify_comp_desc,
 	/* data interface, altsettings 0 and 1 */
-	(struct usb_descriptor_header *) &ncm_data_nop_intf,
-	(struct usb_descriptor_header *) &ncm_data_intf,
-	(struct usb_descriptor_header *) &ss_ncm_in_desc,
-	(struct usb_descriptor_header *) &ss_ncm_bulk_comp_desc,
-	(struct usb_descriptor_header *) &ss_ncm_out_desc,
-	(struct usb_descriptor_header *) &ss_ncm_bulk_comp_desc,
+	(struct usb_descriptor_header *)&ncm_data_nop_intf,
+	(struct usb_descriptor_header *)&ncm_data_intf,
+	(struct usb_descriptor_header *)&ss_ncm_in_desc,
+	(struct usb_descriptor_header *)&ss_ncm_bulk_comp_desc,
+	(struct usb_descriptor_header *)&ss_ncm_out_desc,
+	(struct usb_descriptor_header *)&ss_ncm_bulk_comp_desc,
 	NULL,
 };
 
 /* string descriptors: */
 
-#define STRING_CTRL_IDX	0
-#define STRING_MAC_IDX	1
-#define STRING_DATA_IDX	2
-#define STRING_IAD_IDX	3
+#define STRING_CTRL_IDX 0
+#define STRING_MAC_IDX 1
+#define STRING_DATA_IDX 2
+#define STRING_IAD_IDX 3
 
 static struct usb_string ncm_string_defs[] = {
 	[STRING_CTRL_IDX].s = "CDC Network Control Model (NCM)",
 	[STRING_MAC_IDX].s = "",
 	[STRING_DATA_IDX].s = "CDC Network Data",
 	[STRING_IAD_IDX].s = "CDC NCM",
-	{  } /* end of list */
+	{} /* end of list */
 };
 
 static struct usb_gadget_strings ncm_string_table = {
-	.language =		0x0409,	/* en-us */
-	.strings =		ncm_string_defs,
+	.language = 0x0409, /* en-us */
+	.strings = ncm_string_defs,
 };
 
 static struct usb_gadget_strings *ncm_strings[] = {
@@ -439,50 +438,43 @@ static struct usb_gadget_strings *ncm_strings[] = {
  */
 
 struct ndp_parser_opts {
-	u32		nth_sign;
-	u32		ndp_sign;
-	unsigned	nth_size;
-	unsigned	ndp_size;
-	unsigned	dpe_size;
-	unsigned	ndplen_align;
+	u32 nth_sign;
+	u32 ndp_sign;
+	unsigned nth_size;
+	unsigned ndp_size;
+	unsigned dpe_size;
+	unsigned ndplen_align;
 	/* sizes in u16 units */
-	unsigned	dgram_item_len; /* index or length */
-	unsigned	block_length;
-	unsigned	ndp_index;
-	unsigned	reserved1;
-	unsigned	reserved2;
-	unsigned	next_ndp_index;
+	unsigned dgram_item_len; /* index or length */
+	unsigned block_length;
+	unsigned ndp_index;
+	unsigned reserved1;
+	unsigned reserved2;
+	unsigned next_ndp_index;
 };
 
-#define INIT_NDP16_OPTS {					\
-		.nth_sign = USB_CDC_NCM_NTH16_SIGN,		\
-		.ndp_sign = USB_CDC_NCM_NDP16_NOCRC_SIGN,	\
-		.nth_size = sizeof(struct usb_cdc_ncm_nth16),	\
-		.ndp_size = sizeof(struct usb_cdc_ncm_ndp16),	\
-		.dpe_size = sizeof(struct usb_cdc_ncm_dpe16),	\
-		.ndplen_align = 4,				\
-		.dgram_item_len = 1,				\
-		.block_length = 1,				\
-		.ndp_index = 1,					\
-		.reserved1 = 0,					\
-		.reserved2 = 0,					\
-		.next_ndp_index = 1,				\
+#define INIT_NDP16_OPTS                                                        \
+	{                                                                      \
+		.nth_sign = USB_CDC_NCM_NTH16_SIGN,                            \
+		.ndp_sign = USB_CDC_NCM_NDP16_NOCRC_SIGN,                      \
+		.nth_size = sizeof(struct usb_cdc_ncm_nth16),                  \
+		.ndp_size = sizeof(struct usb_cdc_ncm_ndp16),                  \
+		.dpe_size = sizeof(struct usb_cdc_ncm_dpe16),                  \
+		.ndplen_align = 4, .dgram_item_len = 1, .block_length = 1,     \
+		.ndp_index = 1, .reserved1 = 0, .reserved2 = 0,                \
+		.next_ndp_index = 1,                                           \
 	}
 
-
-#define INIT_NDP32_OPTS {					\
-		.nth_sign = USB_CDC_NCM_NTH32_SIGN,		\
-		.ndp_sign = USB_CDC_NCM_NDP32_NOCRC_SIGN,	\
-		.nth_size = sizeof(struct usb_cdc_ncm_nth32),	\
-		.ndp_size = sizeof(struct usb_cdc_ncm_ndp32),	\
-		.dpe_size = sizeof(struct usb_cdc_ncm_dpe32),	\
-		.ndplen_align = 8,				\
-		.dgram_item_len = 2,				\
-		.block_length = 2,				\
-		.ndp_index = 2,					\
-		.reserved1 = 1,					\
-		.reserved2 = 2,					\
-		.next_ndp_index = 2,				\
+#define INIT_NDP32_OPTS                                                        \
+	{                                                                      \
+		.nth_sign = USB_CDC_NCM_NTH32_SIGN,                            \
+		.ndp_sign = USB_CDC_NCM_NDP32_NOCRC_SIGN,                      \
+		.nth_size = sizeof(struct usb_cdc_ncm_nth32),                  \
+		.ndp_size = sizeof(struct usb_cdc_ncm_ndp32),                  \
+		.dpe_size = sizeof(struct usb_cdc_ncm_dpe32),                  \
+		.ndplen_align = 8, .dgram_item_len = 2, .block_length = 2,     \
+		.ndp_index = 2, .reserved1 = 1, .reserved2 = 2,                \
+		.next_ndp_index = 2,                                           \
 	}
 
 static const struct ndp_parser_opts ndp16_opts = INIT_NDP16_OPTS;
@@ -545,11 +537,11 @@ static inline void ncm_reset_values(struct f_ncm *ncm)
  */
 static void ncm_do_notify(struct f_ncm *ncm)
 {
-	struct usb_request		*req = ncm->notify_req;
-	struct usb_cdc_notification	*event;
-	struct usb_composite_dev	*cdev = ncm->port.func.config->cdev;
-	__le32				*data;
-	int				status;
+	struct usb_request *req = ncm->notify_req;
+	struct usb_cdc_notification *event;
+	struct usb_composite_dev *cdev = ncm->port.func.config->cdev;
+	__le32 *data;
+	int status;
 
 	/* notification already in flight? */
 	if (atomic_read(&ncm->notify_count))
@@ -570,7 +562,7 @@ static void ncm_do_notify(struct f_ncm *ncm)
 		req->length = sizeof *event;
 
 		DBG(cdev, "notify connect %s\n",
-				ncm->is_open ? "true" : "false");
+		    ncm->is_open ? "true" : "false");
 		ncm->notify_state = NCM_NOTIFY_NONE;
 		break;
 
@@ -629,9 +621,9 @@ static void ncm_notify(struct f_ncm *ncm)
 
 static void ncm_notify_complete(struct usb_ep *ep, struct usb_request *req)
 {
-	struct f_ncm			*ncm = req->context;
-	struct usb_composite_dev	*cdev = ncm->port.func.config->cdev;
-	struct usb_cdc_notification	*event = req->buf;
+	struct f_ncm *ncm = req->context;
+	struct usb_composite_dev *cdev = ncm->port.func.config->cdev;
+	struct usb_cdc_notification *event = req->buf;
 
 	spin_lock(&ncm->lock);
 	switch (req->status) {
@@ -646,8 +638,8 @@ static void ncm_notify_complete(struct usb_ep *ep, struct usb_request *req)
 		ncm->notify_state = NCM_NOTIFY_NONE;
 		break;
 	default:
-		DBG(cdev, "event %02x --> %d\n",
-			event->bNotificationType, req->status);
+		DBG(cdev, "event %02x --> %d\n", event->bNotificationType,
+		    req->status);
 		atomic_dec(&ncm->notify_count);
 		break;
 	}
@@ -658,9 +650,9 @@ static void ncm_notify_complete(struct usb_ep *ep, struct usb_request *req)
 static void ncm_ep0out_complete(struct usb_ep *ep, struct usb_request *req)
 {
 	/* now for SET_NTB_INPUT_SIZE only */
-	unsigned		in_size;
-	struct usb_function	*f = req->context;
-	struct f_ncm		*ncm = func_to_ncm(f);
+	unsigned in_size;
+	struct usb_function *f = req->context;
+	struct f_ncm *ncm = func_to_ncm(f);
 	struct usb_composite_dev *cdev = f->config->cdev;
 
 	req->context = NULL;
@@ -687,21 +679,21 @@ invalid:
 
 static int ncm_setup(struct usb_function *f, const struct usb_ctrlrequest *ctrl)
 {
-	struct f_ncm		*ncm = func_to_ncm(f);
+	struct f_ncm *ncm = func_to_ncm(f);
 	struct usb_composite_dev *cdev = f->config->cdev;
-	struct usb_request	*req = cdev->req;
-	int			value = -EOPNOTSUPP;
-	u16			w_index = le16_to_cpu(ctrl->wIndex);
-	u16			w_value = le16_to_cpu(ctrl->wValue);
-	u16			w_length = le16_to_cpu(ctrl->wLength);
+	struct usb_request *req = cdev->req;
+	int value = -EOPNOTSUPP;
+	u16 w_index = le16_to_cpu(ctrl->wIndex);
+	u16 w_value = le16_to_cpu(ctrl->wValue);
+	u16 w_length = le16_to_cpu(ctrl->wLength);
 
 	/*
 	 * composite driver infrastructure handles everything except
 	 * CDC class messages; interface activation uses set_alt().
 	 */
 	switch ((ctrl->bRequestType << 8) | ctrl->bRequest) {
-	case ((USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE) << 8)
-			| USB_CDC_SET_ETHERNET_PACKET_FILTER:
+	case ((USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE) << 8) |
+		USB_CDC_SET_ETHERNET_PACKET_FILTER:
 		/*
 		 * see 6.2.30: no data, wIndex = interface,
 		 * wValue = packet filter bitmap
@@ -717,7 +709,7 @@ static int ncm_setup(struct usb_function *f, const struct usb_ctrlrequest *ctrl)
 		ncm->port.cdc_filter = w_value;
 		value = 0;
 		break;
-	/*
+		/*
 	 * and optionally:
 	 * case USB_CDC_SEND_ENCAPSULATED_COMMAND:
 	 * case USB_CDC_GET_ENCAPSULATED_RESPONSE:
@@ -727,19 +719,20 @@ static int ncm_setup(struct usb_function *f, const struct usb_ctrlrequest *ctrl)
 	 * case USB_CDC_GET_ETHERNET_STATISTIC:
 	 */
 
-	case ((USB_DIR_IN | USB_TYPE_CLASS | USB_RECIP_INTERFACE) << 8)
-		| USB_CDC_GET_NTB_PARAMETERS:
+	case ((USB_DIR_IN | USB_TYPE_CLASS | USB_RECIP_INTERFACE) << 8) |
+		USB_CDC_GET_NTB_PARAMETERS:
 
 		if (w_length == 0 || w_value != 0 || w_index != ncm->ctrl_id)
 			goto invalid;
 		value = w_length > sizeof ntb_parameters ?
-			sizeof ntb_parameters : w_length;
+				sizeof ntb_parameters :
+				w_length;
 		memcpy(req->buf, &ntb_parameters, value);
 		VDBG(cdev, "Host asked NTB parameters\n");
 		break;
 
-	case ((USB_DIR_IN | USB_TYPE_CLASS | USB_RECIP_INTERFACE) << 8)
-		| USB_CDC_GET_NTB_INPUT_SIZE:
+	case ((USB_DIR_IN | USB_TYPE_CLASS | USB_RECIP_INTERFACE) << 8) |
+		USB_CDC_GET_NTB_INPUT_SIZE:
 
 		if (w_length < 4 || w_value != 0 || w_index != ncm->ctrl_id)
 			goto invalid;
@@ -749,9 +742,8 @@ static int ncm_setup(struct usb_function *f, const struct usb_ctrlrequest *ctrl)
 		     ncm->port.fixed_in_len);
 		break;
 
-	case ((USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE) << 8)
-		| USB_CDC_SET_NTB_INPUT_SIZE:
-	{
+	case ((USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE) << 8) |
+		USB_CDC_SET_NTB_INPUT_SIZE: {
 		if (w_length != 4 || w_value != 0 || w_index != ncm->ctrl_id)
 			goto invalid;
 		req->complete = ncm_ep0out_complete;
@@ -762,9 +754,8 @@ static int ncm_setup(struct usb_function *f, const struct usb_ctrlrequest *ctrl)
 		break;
 	}
 
-	case ((USB_DIR_IN | USB_TYPE_CLASS | USB_RECIP_INTERFACE) << 8)
-		| USB_CDC_GET_NTB_FORMAT:
-	{
+	case ((USB_DIR_IN | USB_TYPE_CLASS | USB_RECIP_INTERFACE) << 8) |
+		USB_CDC_GET_NTB_FORMAT: {
 		uint16_t format;
 
 		if (w_length < 2 || w_value != 0 || w_index != ncm->ctrl_id)
@@ -776,9 +767,8 @@ static int ncm_setup(struct usb_function *f, const struct usb_ctrlrequest *ctrl)
 		break;
 	}
 
-	case ((USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE) << 8)
-		| USB_CDC_SET_NTB_FORMAT:
-	{
+	case ((USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE) << 8) |
+		USB_CDC_SET_NTB_FORMAT: {
 		if (w_length != 0 || w_index != ncm->ctrl_id)
 			goto invalid;
 		switch (w_value) {
@@ -796,9 +786,8 @@ static int ncm_setup(struct usb_function *f, const struct usb_ctrlrequest *ctrl)
 		value = 0;
 		break;
 	}
-	case ((USB_DIR_IN | USB_TYPE_CLASS | USB_RECIP_INTERFACE) << 8)
-		| USB_CDC_GET_CRC_MODE:
-	{
+	case ((USB_DIR_IN | USB_TYPE_CLASS | USB_RECIP_INTERFACE) << 8) |
+		USB_CDC_GET_CRC_MODE: {
 		uint16_t is_crc;
 
 		if (w_length < 2 || w_value != 0 || w_index != ncm->ctrl_id)
@@ -810,9 +799,8 @@ static int ncm_setup(struct usb_function *f, const struct usb_ctrlrequest *ctrl)
 		break;
 	}
 
-	case ((USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE) << 8)
-		| USB_CDC_SET_CRC_MODE:
-	{
+	case ((USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE) << 8) |
+		USB_CDC_SET_CRC_MODE: {
 		if (w_length != 0 || w_index != ncm->ctrl_id)
 			goto invalid;
 		switch (w_value) {
@@ -831,43 +819,41 @@ static int ncm_setup(struct usb_function *f, const struct usb_ctrlrequest *ctrl)
 		break;
 	}
 
-	/* and disabled in ncm descriptor: */
-	/* case USB_CDC_GET_NET_ADDRESS: */
-	/* case USB_CDC_SET_NET_ADDRESS: */
-	/* case USB_CDC_GET_MAX_DATAGRAM_SIZE: */
-	/* case USB_CDC_SET_MAX_DATAGRAM_SIZE: */
+		/* and disabled in ncm descriptor: */
+		/* case USB_CDC_GET_NET_ADDRESS: */
+		/* case USB_CDC_SET_NET_ADDRESS: */
+		/* case USB_CDC_GET_MAX_DATAGRAM_SIZE: */
+		/* case USB_CDC_SET_MAX_DATAGRAM_SIZE: */
 
 	default:
-invalid:
+	invalid:
 		DBG(cdev, "invalid control req%02x.%02x v%04x i%04x l%d\n",
-			ctrl->bRequestType, ctrl->bRequest,
-			w_value, w_index, w_length);
+		    ctrl->bRequestType, ctrl->bRequest, w_value, w_index,
+		    w_length);
 	}
 	ncm->ndp_sign = ncm->parser_opts->ndp_sign |
-		(ncm->is_crc ? NCM_NDP_HDR_CRC : 0);
+			(ncm->is_crc ? NCM_NDP_HDR_CRC : 0);
 
 	/* respond with data transfer or status phase? */
 	if (value >= 0) {
 		DBG(cdev, "ncm req%02x.%02x v%04x i%04x l%d\n",
-			ctrl->bRequestType, ctrl->bRequest,
-			w_value, w_index, w_length);
+		    ctrl->bRequestType, ctrl->bRequest, w_value, w_index,
+		    w_length);
 		req->zero = 0;
 		req->length = value;
 		value = usb_ep_queue(cdev->gadget->ep0, req, GFP_ATOMIC);
 		if (value < 0)
 			ERROR(cdev, "ncm req %02x.%02x response err %d\n",
-					ctrl->bRequestType, ctrl->bRequest,
-					value);
+			      ctrl->bRequestType, ctrl->bRequest, value);
 	}
 
 	/* device either stalls (value < 0) or reports success */
 	return value;
 }
 
-
 static int ncm_set_alt(struct usb_function *f, unsigned intf, unsigned alt)
 {
-	struct f_ncm		*ncm = func_to_ncm(f);
+	struct f_ncm *ncm = func_to_ncm(f);
 	struct usb_composite_dev *cdev = f->config->cdev;
 
 	/* Control interface has only altsetting 0 */
@@ -885,7 +871,7 @@ static int ncm_set_alt(struct usb_function *f, unsigned intf, unsigned alt)
 		}
 		usb_ep_enable(ncm->notify);
 
-	/* Data interface has two altsettings, 0 and 1 */
+		/* Data interface has two altsettings, 0 and 1 */
 	} else if (intf == ncm->data_id) {
 		if (alt > 1)
 			goto fail;
@@ -903,10 +889,9 @@ static int ncm_set_alt(struct usb_function *f, unsigned intf, unsigned alt)
 		 * Changing altsettings resets filters, statistics, etc.
 		 */
 		if (alt == 1) {
-			struct net_device	*net;
+			struct net_device *net;
 
-			if (!ncm->port.in_ep->desc ||
-			    !ncm->port.out_ep->desc) {
+			if (!ncm->port.in_ep->desc || !ncm->port.out_ep->desc) {
 				DBG(cdev, "init ncm\n");
 				if (config_ep_by_speed(cdev->gadget, f,
 						       ncm->port.in_ep) ||
@@ -950,7 +935,7 @@ fail:
  */
 static int ncm_get_alt(struct usb_function *f, unsigned intf)
 {
-	struct f_ncm		*ncm = func_to_ncm(f);
+	struct f_ncm *ncm = func_to_ncm(f);
 
 	if (intf == ncm->ctrl_id)
 		return 0;
@@ -959,11 +944,11 @@ static int ncm_get_alt(struct usb_function *f, unsigned intf)
 
 static struct sk_buff *package_for_tx(struct f_ncm *ncm)
 {
-	__le16		*ntb_iter;
-	struct sk_buff	*skb2 = NULL;
-	unsigned	ndp_pad;
-	unsigned	ndp_index;
-	unsigned	new_len;
+	__le16 *ntb_iter;
+	struct sk_buff *skb2 = NULL;
+	unsigned ndp_pad;
+	unsigned ndp_index;
+	unsigned new_len;
 
 	const struct ndp_parser_opts *opts = ncm->parser_opts;
 	const int ndp_align = le16_to_cpu(ntb_parameters.wNdpInAlignment);
@@ -972,24 +957,23 @@ static struct sk_buff *package_for_tx(struct f_ncm *ncm)
 	/* Stop the timer */
 	hrtimer_try_to_cancel(&ncm->task_timer);
 
-	ndp_pad = ALIGN(ncm->skb_tx_data->len, ndp_align) -
-			ncm->skb_tx_data->len;
+	ndp_pad =
+		ALIGN(ncm->skb_tx_data->len, ndp_align) - ncm->skb_tx_data->len;
 	ndp_index = ncm->skb_tx_data->len + ndp_pad;
 	new_len = ndp_index + dgram_idx_len + ncm->skb_tx_ndp->len;
 
 	/* Set the final BlockLength and wNdpIndex */
-	ntb_iter = (void *) ncm->skb_tx_data->data;
+	ntb_iter = (void *)ncm->skb_tx_data->data;
 	/* Increment pointer to BlockLength */
 	ntb_iter += 2 + 1 + 1;
 	put_ncm(&ntb_iter, opts->block_length, new_len);
 	put_ncm(&ntb_iter, opts->ndp_index, ndp_index);
 
 	/* Set the final NDP wLength */
-	new_len = opts->ndp_size +
-			(ncm->ndp_dgram_count * dgram_idx_len);
+	new_len = opts->ndp_size + (ncm->ndp_dgram_count * dgram_idx_len);
 	ncm->ndp_dgram_count = 0;
 	/* Increment from start to wLength */
-	ntb_iter = (void *) ncm->skb_tx_ndp->data;
+	ntb_iter = (void *)ncm->skb_tx_ndp->data;
 	ntb_iter += 2;
 	put_unaligned_le16(new_len, ntb_iter);
 
@@ -1014,17 +998,16 @@ static struct sk_buff *package_for_tx(struct f_ncm *ncm)
 	return skb2;
 }
 
-static struct sk_buff *ncm_wrap_ntb(struct gether *port,
-				    struct sk_buff *skb)
+static struct sk_buff *ncm_wrap_ntb(struct gether *port, struct sk_buff *skb)
 {
-	struct f_ncm	*ncm = func_to_ncm(&port->func);
-	struct sk_buff	*skb2 = NULL;
-	int		ncb_len = 0;
-	__le16		*ntb_data;
-	__le16		*ntb_ndp;
-	int		dgram_pad;
+	struct f_ncm *ncm = func_to_ncm(&port->func);
+	struct sk_buff *skb2 = NULL;
+	int ncb_len = 0;
+	__le16 *ntb_data;
+	__le16 *ntb_ndp;
+	int dgram_pad;
 
-	unsigned	max_size = ncm->port.fixed_in_len;
+	unsigned max_size = ncm->port.fixed_in_len;
 	const struct ndp_parser_opts *opts = ncm->parser_opts;
 	const int ndp_align = le16_to_cpu(ntb_parameters.wNdpInAlignment);
 	const int div = le16_to_cpu(ntb_parameters.wNdpInDivisor);
@@ -1037,12 +1020,10 @@ static struct sk_buff *ncm_wrap_ntb(struct gether *port,
 	if (skb) {
 		/* Add the CRC if required up front */
 		if (ncm->is_crc) {
-			uint32_t	crc;
-			__le16		*crc_pos;
+			uint32_t crc;
+			__le16 *crc_pos;
 
-			crc = ~crc32_le(~0,
-					skb->data,
-					skb->len);
+			crc = ~crc32_le(~0, skb->data, skb->len);
 			crc_pos = skb_put(skb, sizeof(uint32_t));
 			put_unaligned_le32(crc, crc_pos);
 		}
@@ -1052,12 +1033,11 @@ static struct sk_buff *ncm_wrap_ntb(struct gether *port,
 		 * ready for new data.
 		 * NOTE: Assume maximum align for speed of calculation.
 		 */
-		if (ncm->skb_tx_data
-		    && (ncm->ndp_dgram_count >= TX_MAX_NUM_DPE
-		    || (ncm->skb_tx_data->len +
-		    div + rem + skb->len +
-		    ncm->skb_tx_ndp->len + ndp_align + (2 * dgram_idx_len))
-		    > max_size)) {
+		if (ncm->skb_tx_data &&
+		    (ncm->ndp_dgram_count >= TX_MAX_NUM_DPE ||
+		     (ncm->skb_tx_data->len + div + rem + skb->len +
+		      ncm->skb_tx_ndp->len + ndp_align + (2 * dgram_idx_len)) >
+			     max_size)) {
 			skb2 = package_for_tx(ncm);
 			if (!skb2)
 				goto err;
@@ -1085,10 +1065,10 @@ static struct sk_buff *ncm_wrap_ntb(struct gether *port,
 			 * TX_MAX_NUM_DPE should easily suffice for a
 			 * 16k packet.
 			 */
-			ncm->skb_tx_ndp = alloc_skb((int)(opts->ndp_size
-						    + opts->dpe_size
-						    * TX_MAX_NUM_DPE),
-						    GFP_ATOMIC);
+			ncm->skb_tx_ndp = alloc_skb(
+				(int)(opts->ndp_size +
+				      opts->dpe_size * TX_MAX_NUM_DPE),
+				GFP_ATOMIC);
 			if (!ncm->skb_tx_ndp)
 				goto err;
 
@@ -1175,29 +1155,33 @@ static enum hrtimer_restart ncm_tx_timeout(struct hrtimer *data)
 	return HRTIMER_NORESTART;
 }
 
-static int ncm_unwrap_ntb(struct gether *port,
-			  struct sk_buff *skb,
+static int ncm_unwrap_ntb(struct gether *port, struct sk_buff *skb,
 			  struct sk_buff_head *list)
 {
-	struct f_ncm	*ncm = func_to_ncm(&port->func);
-	__le16		*tmp = (void *) skb->data;
-	unsigned	index, index2;
-	int		ndp_index;
-	unsigned	dg_len, dg_len2;
-	unsigned	ndp_len;
-	unsigned	block_len;
-	struct sk_buff	*skb2;
-	int		ret = -EINVAL;
-	unsigned	ntb_max = le32_to_cpu(ntb_parameters.dwNtbOutMaxSize);
-	unsigned	frame_max = le16_to_cpu(ecm_desc.wMaxSegmentSize);
+	struct f_ncm *ncm = func_to_ncm(&port->func);
+	unsigned char *ntb_ptr = skb->data;
+	__le16 *tmp;
+	unsigned index, index2;
+	int ndp_index;
+	unsigned dg_len, dg_len2;
+	unsigned ndp_len;
+	unsigned block_len;
+	struct sk_buff *skb2;
+	int ret = -EINVAL;
+	unsigned ntb_max = le32_to_cpu(ntb_parameters.dwNtbOutMaxSize);
+	unsigned frame_max = le16_to_cpu(ecm_desc.wMaxSegmentSize);
 	const struct ndp_parser_opts *opts = ncm->parser_opts;
-	unsigned	crc_len = ncm->is_crc ? sizeof(uint32_t) : 0;
-	int		dgram_counter;
+	unsigned crc_len = ncm->is_crc ? sizeof(uint32_t) : 0;
+	int dgram_counter;
+	int to_process = skb->len;
+
+parse_ntb:
+	tmp = (__le16 *)ntb_ptr;
 
 	/* dwSignature */
 	if (get_unaligned_le32(tmp) != opts->nth_sign) {
 		INFO(port->func.config->cdev, "Wrong NTH SIGN, skblen %d\n",
-			skb->len);
+		     skb->len);
 		print_hex_dump(KERN_INFO, "HEAD:", DUMP_PREFIX_ADDRESS, 32, 1,
 			       skb->data, 32, false);
 
@@ -1226,10 +1210,8 @@ static int ncm_unwrap_ntb(struct gether *port,
 		 * NCM 3.2
 		 * dwNdpIndex
 		 */
-		if (((ndp_index % 4) != 0) ||
-				(ndp_index < opts->nth_size) ||
-				(ndp_index > (block_len -
-					      opts->ndp_size))) {
+		if (((ndp_index % 4) != 0) || (ndp_index < opts->nth_size) ||
+		    (ndp_index > (block_len - opts->ndp_size))) {
 			INFO(port->func.config->cdev, "Bad index: %#X\n",
 			     ndp_index);
 			goto err;
@@ -1239,7 +1221,7 @@ static int ncm_unwrap_ntb(struct gether *port,
 		 * walk through NDP
 		 * dwSignature
 		 */
-		tmp = (void *)(skb->data + ndp_index);
+		tmp = (__le16 *)(ntb_ptr + ndp_index);
 		if (get_unaligned_le32(tmp) != ncm->ndp_sign) {
 			INFO(port->func.config->cdev, "Wrong NDP SIGN\n");
 			goto err;
@@ -1255,9 +1237,9 @@ static int ncm_unwrap_ntb(struct gether *port,
 		 * minimal: struct usb_cdc_ncm_ndpX + normal entry + zero entry
 		 * Each entry is a dgram index and a dgram length.
 		 */
-		if ((ndp_len < opts->ndp_size
-				+ 2 * 2 * (opts->dgram_item_len * 2)) ||
-				(ndp_len % opts->ndplen_align != 0)) {
+		if ((ndp_len <
+		     opts->ndp_size + 2 * 2 * (opts->dgram_item_len * 2)) ||
+		    (ndp_len % opts->ndplen_align != 0)) {
 			INFO(port->func.config->cdev, "Bad NDP length: %#X\n",
 			     ndp_len);
 			goto err;
@@ -1276,7 +1258,7 @@ static int ncm_unwrap_ntb(struct gether *port,
 			index = index2;
 			/* wDatagramIndex[0] */
 			if ((index < opts->nth_size) ||
-					(index > block_len - opts->dpe_size)) {
+			    (index > block_len - opts->dpe_size)) {
 				INFO(port->func.config->cdev,
 				     "Bad index: %#X\n", index);
 				goto err;
@@ -1287,8 +1269,7 @@ static int ncm_unwrap_ntb(struct gether *port,
 			 * wDatagramLength[0]
 			 * ethernet hdr + crc or larger than max frame size
 			 */
-			if ((dg_len < 14 + crc_len) ||
-					(dg_len > frame_max)) {
+			if ((dg_len < 14 + crc_len) || (dg_len > frame_max)) {
 				INFO(port->func.config->cdev,
 				     "Bad dgram length: %#X\n", dg_len);
 				goto err;
@@ -1296,11 +1277,9 @@ static int ncm_unwrap_ntb(struct gether *port,
 			if (ncm->is_crc) {
 				uint32_t crc, crc2;
 
-				crc = get_unaligned_le32(skb->data +
-							 index + dg_len -
-							 crc_len);
-				crc2 = ~crc32_le(~0,
-						 skb->data + index,
+				crc = get_unaligned_le32(ntb_ptr + index +
+							 dg_len - crc_len);
+				crc2 = ~crc32_le(~0, ntb_ptr + index,
 						 dg_len - crc_len);
 				if (crc != crc2) {
 					INFO(port->func.config->cdev,
@@ -1327,8 +1306,7 @@ static int ncm_unwrap_ntb(struct gether *port,
 							 dg_len - crc_len);
 			if (skb2 == NULL)
 				goto err;
-			skb_put_data(skb2, skb->data + index,
-				     dg_len - crc_len);
+			skb_put_data(skb2, ntb_ptr + index, dg_len - crc_len);
 
 			skb_queue_tail(list, skb2);
 
@@ -1340,10 +1318,17 @@ static int ncm_unwrap_ntb(struct gether *port,
 		} while (ndp_len > 2 * (opts->dgram_item_len * 2));
 	} while (ndp_index);
 
+	VDBG(port->func.config->cdev, "Parsed NTB with %d frames\n",
+	     dgram_counter);
+
+	to_process -= block_len;
+	if (to_process != 0) {
+		ntb_ptr = (unsigned char *)(ntb_ptr + block_len);
+		goto parse_ntb;
+	}
+
 	dev_consume_skb_any(skb);
 
-	VDBG(port->func.config->cdev,
-	     "Parsed NTB with %d frames\n", dgram_counter);
 	return 0;
 err:
 	skb_queue_purge(list);
@@ -1353,7 +1338,7 @@ err:
 
 static void ncm_disable(struct usb_function *f)
 {
-	struct f_ncm		*ncm = func_to_ncm(f);
+	struct f_ncm *ncm = func_to_ncm(f);
 	struct usb_composite_dev *cdev = f->config->cdev;
 
 	DBG(cdev, "ncm deactivated\n");
@@ -1392,7 +1377,7 @@ static void ncm_disable(struct usb_function *f)
 
 static void ncm_open(struct gether *geth)
 {
-	struct f_ncm		*ncm = func_to_ncm(&geth->func);
+	struct f_ncm *ncm = func_to_ncm(&geth->func);
 
 	DBG(ncm->port.func.config->cdev, "%s\n", __func__);
 
@@ -1404,7 +1389,7 @@ static void ncm_open(struct gether *geth)
 
 static void ncm_close(struct gether *geth)
 {
-	struct f_ncm		*ncm = func_to_ncm(&geth->func);
+	struct f_ncm *ncm = func_to_ncm(&geth->func);
 
 	DBG(ncm->port.func.config->cdev, "%s\n", __func__);
 
@@ -1421,11 +1406,11 @@ static void ncm_close(struct gether *geth)
 static int ncm_bind(struct usb_configuration *c, struct usb_function *f)
 {
 	struct usb_composite_dev *cdev = c->cdev;
-	struct f_ncm		*ncm = func_to_ncm(f);
-	struct usb_string	*us;
-	int			status;
-	struct usb_ep		*ep;
-	struct f_ncm_opts	*ncm_opts;
+	struct f_ncm *ncm = func_to_ncm(f);
+	struct usb_string *us;
+	int status = 0;
+	struct usb_ep *ep;
+	struct f_ncm_opts *ncm_opts;
 
 	if (!can_support_ecm(cdev->gadget))
 		return -EINVAL;
@@ -1433,8 +1418,8 @@ static int ncm_bind(struct usb_configuration *c, struct usb_function *f)
 	ncm_opts = container_of(f->fi, struct f_ncm_opts, func_inst);
 
 	if (cdev->use_os_string) {
-		f->os_desc_table = kzalloc(sizeof(*f->os_desc_table),
-					   GFP_KERNEL);
+		f->os_desc_table =
+			kzalloc(sizeof(*f->os_desc_table), GFP_KERNEL);
 		if (!f->os_desc_table)
 			return -ENOMEM;
 		f->os_desc_n = 1;
@@ -1468,10 +1453,10 @@ static int ncm_bind(struct usb_configuration *c, struct usb_function *f)
 
 	/* export host's Ethernet address in CDC format */
 	status = gether_get_host_addr_cdc(ncm_opts->net, ncm->ethaddr,
-				      sizeof(ncm->ethaddr));
+					  sizeof(ncm->ethaddr));
 	if (status < 12) { /* strlen("01234567890a") */
 		ERROR(cdev, "%s: failed to get host eth addr, err %d\n",
-		__func__, status);
+		      __func__, status);
 		status = -EINVAL;
 		goto netdev_cleanup;
 	}
@@ -1500,8 +1485,7 @@ static int ncm_bind(struct usb_configuration *c, struct usb_function *f)
 	ncm_union_desc.bMasterInterface0 = status;
 
 	if (cdev->use_os_string)
-		f->os_desc_table[0].if_id =
-			ncm_iad_desc.bFirstInterface;
+		f->os_desc_table[0].if_id = ncm_iad_desc.bFirstInterface;
 
 	status = usb_interface_id(c, f);
 	if (status < 0)
@@ -1558,7 +1542,7 @@ static int ncm_bind(struct usb_configuration *c, struct usb_function *f)
 		fs_ncm_notify_desc.bEndpointAddress;
 
 	status = usb_assign_descriptors(f, ncm_fs_function, ncm_hs_function,
-			ncm_ss_function, ncm_ss_function);
+					ncm_ss_function, ncm_ss_function);
 	if (status)
 		goto fail;
 
@@ -1575,10 +1559,10 @@ static int ncm_bind(struct usb_configuration *c, struct usb_function *f)
 	ncm->task_timer.function = ncm_tx_timeout;
 
 	DBG(cdev, "CDC Network: %s speed IN/%s OUT/%s NOTIFY/%s\n",
-			gadget_is_superspeed(c->cdev->gadget) ? "super" :
-			gadget_is_dualspeed(c->cdev->gadget) ? "dual" : "full",
-			ncm->port.in_ep->name, ncm->port.out_ep->name,
-			ncm->notify->name);
+	    gadget_is_superspeed(c->cdev->gadget) ? "super" :
+	    gadget_is_dualspeed(c->cdev->gadget)  ? "dual" :
+						    "full",
+	    ncm->port.in_ep->name, ncm->port.out_ep->name, ncm->notify->name);
 	return 0;
 
 fail:
@@ -1629,9 +1613,9 @@ static struct configfs_attribute *ncm_attrs[] = {
 };
 
 static const struct config_item_type ncm_func_type = {
-	.ct_item_ops	= &ncm_item_ops,
-	.ct_attrs	= ncm_attrs,
-	.ct_owner	= THIS_MODULE,
+	.ct_item_ops = &ncm_item_ops,
+	.ct_attrs = ncm_attrs,
+	.ct_owner = THIS_MODULE,
 };
 
 #ifdef CONFIG_USB_CONFIGFS_UEVENT
@@ -1652,18 +1636,18 @@ static void ncm_setup_work(struct work_struct *data)
 	char *envp[2] = { mirror_link_string, NULL };
 
 	snprintf(mirror_link_string, MIRROR_LINK_STRING_LENGTH_MAX,
-		"MirrorLink=V%d.%d",
-		_ncm_setup_desc->major, _ncm_setup_desc->minor);
+		 "MirrorLink=V%d.%d", _ncm_setup_desc->major,
+		 _ncm_setup_desc->minor);
 	kobject_uevent_env(&_ncm_setup_desc->device->kobj, KOBJ_CHANGE, envp);
 }
 
 int ncm_ctrlrequest(struct usb_composite_dev *cdev,
-			const struct usb_ctrlrequest *ctrl)
+		    const struct usb_ctrlrequest *ctrl)
 {
 	int value = -EOPNOTSUPP;
 
-	if (ctrl->bRequestType == 0x40 && ctrl->bRequest == 0xF0
-			&& _ncm_setup_desc) {
+	if (ctrl->bRequestType == 0x40 && ctrl->bRequest == 0xF0 &&
+	    _ncm_setup_desc) {
 		_ncm_setup_desc->minor = (uint8_t)(ctrl->wValue >> 8);
 		_ncm_setup_desc->major = (uint8_t)(ctrl->wValue & 0xFF);
 		schedule_work(&_ncm_setup_desc->work);
@@ -1682,7 +1666,7 @@ static void ncm_free_inst(struct usb_function_instance *f)
 	cancel_work_sync(&_ncm_setup_desc->work);
 	/* release _ncm_setup_desc related resource */
 	device_destroy(_ncm_setup_desc->device->class,
-		_ncm_setup_desc->device->devt);
+		       _ncm_setup_desc->device->devt);
 	kfree(_ncm_setup_desc);
 #endif
 
@@ -1713,9 +1697,8 @@ static struct usb_function_instance *ncm_alloc_inst(void)
 	names[0] = "ncm";
 
 	config_group_init_type_name(&opts->func_inst.group, "", &ncm_func_type);
-	ncm_interf_group =
-		usb_os_desc_prepare_interf_dir(&opts->func_inst.group, 1, descs,
-					       names, THIS_MODULE);
+	ncm_interf_group = usb_os_desc_prepare_interf_dir(
+		&opts->func_inst.group, 1, descs, names, THIS_MODULE);
 	if (IS_ERR(ncm_interf_group)) {
 		ncm_free_inst(&opts->func_inst);
 		return ERR_CAST(ncm_interf_group);
@@ -1749,8 +1732,8 @@ static void ncm_free(struct usb_function *f)
 static void ncm_unbind(struct usb_configuration *c, struct usb_function *f)
 {
 	struct f_ncm *ncm = func_to_ncm(f);
-	struct f_ncm_opts *opts = container_of(f->fi, struct f_ncm_opts,
-					func_inst);
+	struct f_ncm_opts *opts =
+		container_of(f->fi, struct f_ncm_opts, func_inst);
 
 	DBG(c->cdev, "ncm unbind\n");
 
@@ -1777,8 +1760,8 @@ static void ncm_unbind(struct usb_configuration *c, struct usb_function *f)
 
 static struct usb_function *ncm_alloc(struct usb_function_instance *fi)
 {
-	struct f_ncm		*ncm;
-	struct f_ncm_opts	*opts;
+	struct f_ncm *ncm;
+	struct f_ncm_opts *opts;
 
 	/* allocate and initialize one new instance */
 	ncm = kzalloc(sizeof(*ncm), GFP_KERNEL);
